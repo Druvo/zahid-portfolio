@@ -10,6 +10,8 @@ import { buildAll } from './props.js';
 import { Van, available, unlock } from './vehicle.js';
 import { createGame } from './game.js';
 import { createTerminal } from './terminal.js';
+import { createRain, createBlimp, createFireworks } from './extras.js';
+import { createAchievements } from './achievements.js';
 import { input, pollInput, setupTouch, onKey } from './input.js';
 import { createUI } from './ui.js';
 import * as audio from './audio.js';
@@ -65,7 +67,7 @@ async function boot() {
   const spawnA = -34 * DEG, spawnP = roadPoint(spawnA);
   let saved = 'racer'; try { saved = localStorage.getItem('zh-car') || 'racer'; } catch { /* ignore */ }
   const van = new Van(scene, spawnP, spawnA + Math.PI / 2, saved); vanRef = van;
-  const pickCar = (k) => { van.setModel(k); van.headlight.visible = quality !== 'low'; try { localStorage.setItem('zh-car', k); } catch { /* ignore */ } ui.toast('Now driving: ' + van.model.name); };
+  const pickCar = (k) => { van.setModel(k); van.headlight.visible = quality !== 'low'; try { localStorage.setItem('zh-car', k); } catch { /* ignore */ } ui.toast('Now driving: ' + van.model.name); trackCar(k); };
   scene.updateMatrixWorld(true);
 
   let muted = false;
@@ -77,16 +79,24 @@ async function boot() {
   const ui = createUI({
     entries,
     onTravel: travel,
-    onSound() { muted = !muted; audio.setMuted(muted); }, isMuted: () => muted, onCar: (k) => pickCar(k), getCar: () => van.model.key,
+    onSound() { muted = !muted; audio.setMuted(muted); }, isMuted: () => muted, onCar: (k) => pickCar(k), getCar: () => van.model.key, trophyHTML: () => ach.html(),
   });
   setupTouch(document);
 
   // ----- game layer: boost pads, packets, lap timer, secret car -----
   const game = createGame({
     scene, van, startAngle: spawnA,
-    onAllPackets() { unlock('gold'); audio.chime(); ui.toast('All 45 packets delivered. Secret car unlocked: Golden Packet (press V)', 6000); },
+    onAllPackets() { unlock('gold'); ach.unlock('packetsAll'); fw.show(8); audio.chime(); ui.toast('All 45 packets delivered. Secret car unlocked: Golden Packet (press V)', 6000); },
   });
-  game.onLap = (lap, isBest) => { audio.lap(); const m = Math.floor(lap / 60); ui.toast((isBest ? 'New best lap: ' : 'Lap: ') + m + ':' + (lap - m * 60).toFixed(1).padStart(4, '0'), 3500); };
+  game.onLap = (lap, isBest) => { audio.lap(); ach.unlock('lap'); const m = Math.floor(lap / 60); ui.toast((isBest ? 'New best lap: ' : 'Lap: ') + m + ':' + (lap - m * 60).toFixed(1).padStart(4, '0'), 3500); };
+  const ach = createAchievements({ onUnlock(d) { ui.toast('Trophy unlocked: ' + d.title, 4500); audio.chime(); $('#btn-tro').textContent = 'Trophies ' + ach.count + '/' + ach.total; } });
+  $('#btn-tro').textContent = 'Trophies ' + ach.count + '/' + ach.total;
+  const rainFx = createRain(scene), blimp = createBlimp(scene), fw = createFireworks(scene);
+  let rainOn = false, rainK = 0, thunderT = 10, usedCars = new Set(); try { usedCars = new Set(JSON.parse(localStorage.getItem('zh-cars-used') || '[]')); } catch { /* ignore */ }
+  function trackCar(k) { usedCars.add(k); try { localStorage.setItem('zh-cars-used', JSON.stringify([...usedCars])); } catch { /* ignore */ } if (available().every((m) => usedCars.has(m.key)) && usedCars.size >= 4) ach.unlock('garage'); }
+  trackCar(van.model.key);
+  function setRain(on) { rainOn = on; W.setWet(on ? 1 : 0); audio.rain(on); ui.toast(on ? 'Rain on' : 'Rain off'); if (on) ach.unlock('storm'); }
+  let driftT = 0, propT = 0;
   const $pk = $('#pk'), $lap = $('#lapt'), $best = $('#best'); $('#pkt').textContent = game.N;
 
   // ----- sky -----
@@ -97,21 +107,24 @@ async function boot() {
   // ----- dev terminal (`) -----
   const term = createTerminal({
     entries, goto: travel, setCar: (k) => pickCar(k), cars: () => available(), setMood: (m) => { setSky(m); }, moods: MOOD_KEYS,
-    setQuality: (q) => applyQuality(q), game,
+    setQuality: (q) => applyQuality(q), game, weather: (on) => setRain(on), party: () => fw.show(8), onOpen: () => ach.unlock('hacker'),
   });
   progress(100);
 
   // ----- camera state -----
   let snap = false, camYaw = van.heading, camOff = 0, zoom = 12, introMode = true, introT = 0, blend = 0;
   const camPos = new THREE.Vector3(0, 60, 150), look = new THREE.Vector3(), tmp = new THREE.Vector3();
-  addEventListener('wheel', (e) => { zoom = THREE.MathUtils.clamp(zoom + e.deltaY * 0.01, 7, 22); }, { passive: true });
-  let drag = false, lx = 0;
-  canvas.addEventListener('pointerdown', (e) => { drag = true; lx = e.clientX; });
+  addEventListener('wheel', (e) => { zoom = THREE.MathUtils.clamp(zoom + e.deltaY * 0.01, photo ? 3.5 : 7, photo ? 40 : 22); }, { passive: true });
+  let drag = false, lx = 0, ly = 0, photo = false, camPitch = 0.35;
+  canvas.addEventListener('pointerdown', (e) => { drag = true; lx = e.clientX; ly = e.clientY; });
   addEventListener('pointerup', () => { drag = false; });
-  addEventListener('pointermove', (e) => { if (drag) { camOff -= (e.clientX - lx) * 0.006; lx = e.clientX; } });
+  addEventListener('pointermove', (e) => { if (drag) { camOff -= (e.clientX - lx) * 0.006; lx = e.clientX; if (photo) { camPitch = THREE.MathUtils.clamp(camPitch + (e.clientY - ly) * 0.005, -0.05, 1.4); } ly = e.clientY; } });
 
   onKey((k) => {
-    if (k === 'Escape') { ui.closeAll(); term.close(); }
+    if (k === 'Escape') { ui.closeAll(); term.close(); if (photo) setPhoto(false); }
+    if (k === 'KeyP' && !introMode) setPhoto(!photo);
+    if (k === 'KeyK' && !introMode) setRain(!rainOn);
+    if (k === 'KeyJ' && !introMode) ui.toggle(ui.trophies);
     if (k === 'KeyM' && !introMode) ui.toggle(ui.menu);
     if (k === 'KeyC' && !introMode) ui.toggle(ui.cv);
     if (k === 'KeyV' && !introMode) { const l = available(); pickCar(l[(l.findIndex((x) => x.key === van.model.key) + 1) % l.length].key); }
@@ -123,6 +136,16 @@ async function boot() {
     if (k === 'Enter' && introMode) start();
   });
 
+  function setPhoto(on) {
+    photo = on; document.body.classList.toggle('photo', on);
+    if (on) { zoom = 9; camPitch = 0.3; ui.closeAll(); term.close(); } else { zoom = 12; }
+  }
+  $('#shot').onclick = () => {
+    renderFrame();
+    canvas.toBlob((b) => { if (!b) return; const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'zahid-portfolio.png'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); ach.unlock('photo'); });
+  };
+  $('#shot-exit').onclick = () => setPhoto(false);
+  $('#btn-photo').onclick = () => setPhoto(true);
   function start() {
     if (!introMode) return;
     introMode = false; audio.initAudio();
@@ -146,11 +169,12 @@ async function boot() {
   const clock = new THREE.Clock(); let t = 0, active = null, wasRoad = false;
   const lerpAngle = (a, b, k) => { let d = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; return a + d * k; };
 
+  function renderFrame() { if (quality === 'low') renderer.render(scene, camera); else composer.render(); }
   function tick() {
     if (innerWidth !== sw || innerHeight !== sh) resize();
     const dt = Math.min(clock.getDelta(), 0.05); t += dt;
     const inp = introMode ? { throttle: 0, steer: 0, boost: false, brake: true, hop: false, honk: false, reset: false } : pollInput();
-    if (!introMode && (ui.anyOpen() || term.isOpen)) { inp.throttle = 0; inp.steer = 0; inp.boost = false; }
+    if (!introMode && (ui.anyOpen() || term.isOpen || photo)) { inp.throttle = 0; inp.steer = 0; inp.boost = false; }
     van.update(dt, inp, t);
     world.step(1 / 60, dt, 3);
     for (const s of synced) { const b = s.body; if (b.sleepState === 2) continue; s.mesh.position.copy(b.position); s.mesh.quaternion.copy(b.quaternion); }
@@ -164,7 +188,7 @@ async function boot() {
     }
     if (!introMode) {
       if (active && active.dist < active.radius + 2) { /* stay */ } else active = best && best.dist < best.radius ? best : null;
-      if (active) { if (ui.discover(active)) audio.chime(); }
+      if (active) { if (ui.discover(active)) { audio.chime(); ach.unlock('first'); if (ui.visited.size === entries.length) { ach.unlock('carto'); fw.show(9); } } }
       ui.show(active);
       if (!active) {
         let nb = null, nd = 1e9;
@@ -177,8 +201,15 @@ async function boot() {
       if (e.ring) e.ring.material.opacity = 0.18 + e.f * 0.35;
     }
     W.update(t, dt, vp);
+    rainK += ((rainOn ? 1 : 0) - rainK) * (1 - Math.exp(-dt * 1.5)); rainFx.update(dt, camera.position, rainK);
+    blimp.update(t); fw.update(dt, vp);
     if (!introMode) {
       game.update(t, dt, vp);
+      if (game.collected >= 10) ach.unlock('packets10');
+      if (Math.abs(van.speed) * 3.6 > 100) ach.unlock('speed');
+      if (van.skidding) { driftT += dt; if (driftT > 5) ach.unlock('drift'); }
+      propT += dt; if (propT > 1) { propT = 0; let n = 0; for (const sy of synced) if (sy.body.position.distanceTo(sy.home) > 3) n++; if (n >= 8) ach.unlock('strike'); }
+      if (rainOn) { thunderT -= dt; if (thunderT < 0) { thunderT = 9 + Math.random() * 14; W.strike(); audio.thunder(); } }
       hudT += dt; if (hudT > 0.1) { hudT = 0; $pk.textContent = game.collected; $lap.textContent = game.lapText(); $best.textContent = game.bestText(); }
     }
 
@@ -189,21 +220,22 @@ async function boot() {
     } else {
       blend = Math.min(1, blend + dt * 0.7);
       if (input.camLook) camOff += input.camLook * dt * 1.8;
-      if (!drag && !input.camLook) camOff *= Math.exp(-dt * 0.8);
+      if (!drag && !input.camLook && !photo) camOff *= Math.exp(-dt * 0.8);
       camYaw = lerpAngle(camYaw, van.heading + camOff, 1 - Math.exp(-dt * 3.0));
       const vf = van.forward(), speedK = Math.min(Math.abs(van.speed) / 20, 1.4);
-      const dist = zoom + speedK * 2.2, h = 4.2 + dist * 0.28;
-      tmp.set(vp.x - Math.sin(camYaw) * dist, h, vp.z - Math.cos(camYaw) * dist);
+      const dist = photo ? zoom : zoom + speedK * 2.2, h = 4.2 + dist * 0.28;
+      if (photo) { const cp = Math.cos(camPitch); tmp.set(vp.x - Math.sin(camYaw) * cp * dist, vp.y + 1.2 + Math.sin(camPitch) * dist, vp.z - Math.cos(camYaw) * cp * dist); }
+      else tmp.set(vp.x - Math.sin(camYaw) * dist, h, vp.z - Math.cos(camYaw) * dist);
       if (snap) { camPos.copy(tmp); look.set(vp.x, vp.y + 1.6, vp.z); snap = false; } else camPos.lerp(tmp, 1 - Math.exp(-dt * (blend < 1 ? 1.4 : 6)));
       camera.position.copy(camPos);
       if (van.boosting) camera.position.add(tmp.set((Math.random() - 0.5) * 0.12, (Math.random() - 0.5) * 0.12, (Math.random() - 0.5) * 0.12));
-      look.lerp(tmp.set(vp.x + vf.x * 4, vp.y + 1.6, vp.z + vf.z * 4), 1 - Math.exp(-dt * 8));
+      look.lerp(photo ? tmp.set(vp.x, vp.y + 1.0, vp.z) : tmp.set(vp.x + vf.x * 4, vp.y + 1.6, vp.z + vf.z * 4), 1 - Math.exp(-dt * 8));
       camera.lookAt(look);
       const fov = 55 + speedK * 6 + (van.boosting ? 7 : 0); camera.fov += (fov - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix();
       ui.setSpeed(van.speed, van.boostEnergy); ui.drawMap(vp, van.heading);
       if (quality !== 'low') bloom.strength = 0.14 + (van.boosting ? 0.1 : 0);
     }
-    if (quality === 'low') renderer.render(scene, camera); else composer.render();
+    renderFrame();
     // auto-fallback: weak machines with no saved choice drop to low quality
     if (!introMode && !qPref && !autoDone) {
       fpsT += dt; if (fpsT > 1.5) { fpsN++; fpsSum += dt; }

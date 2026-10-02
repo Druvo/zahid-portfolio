@@ -43,7 +43,7 @@ const hubHTML = {
     <div class="hint">${esc(profile.location)}</div>`,
 };
 
-export function createUI({ entries, onTravel, onSound, isMuted, onCar, getCar }) {
+export function createUI({ entries, onTravel, onSound, isMuted, onCar, getCar, trophyHTML }) {
   const card = $('#card'), prompt = $('#prompt'), toastEl = $('#toast'), mini = $('#minimap'), mctx = mini.getContext('2d');
   const visited = new Set(); let current = null, toastT = 0;
   $('#total').textContent = entries.length;
@@ -89,7 +89,7 @@ export function createUI({ entries, onTravel, onSound, isMuted, onCar, getCar })
   }
 
   // ---------- fast travel + plain CV ----------
-  const menu = $('#mapmenu'), cv = $('#cv'), garage = $('#garage');
+  const menu = $('#mapmenu'), cv = $('#cv'), garage = $('#garage'), trophies = $('#trophies');
   function renderMenu() {
     menu.innerHTML = `<div class="box"><button class="close" data-close>Close (Esc)</button><h2>Fast travel</h2><p>Pick a place and the van teleports there. Projects run chronologically around the road.</p>
       <div class="travel">${entries.map((e, i) => `<button data-i="${i}" class="${visited.has(e.st.id) ? 'seen' : ''}" style="--c:${e.st.color}">${esc(e.st.title.split(' - ')[0])}<small>${esc(e.st.period || e.st.kind)}</small></button>`).join('')}</div></div>`;
@@ -110,7 +110,7 @@ export function createUI({ entries, onTravel, onSound, isMuted, onCar, getCar })
   }
   cv.addEventListener('click', (e) => { if (e.target.closest('[data-close]') || e.target === cv) toggle(cv, false); });
   renderCV();
-  function toggle(el, on) { if (on === undefined) on = el.hidden; if (on && el === menu) renderMenu(); if (on && el === garage) renderGarage(); el.hidden = !on; el.classList.toggle('hide', !on); }
+  function toggle(el, on) { if (on === undefined) on = el.hidden; if (on && el === menu) renderMenu(); if (on && el === garage) renderGarage(); if (on && el === trophies) trophies.innerHTML = trophyHTML(); el.hidden = !on; el.classList.toggle('hide', !on); }
   const pips = (n) => `<span class="pips">${'●'.repeat(n)}<i>${'●'.repeat(5 - n)}</i></span>`;
   function renderGarage() {
     garage.innerHTML = `<div class="box"><button class="close" data-close>Close (Esc)</button><h2>Garage</h2><p>Pick a ride. Press <kbd>V</kbd> any time to cycle.</p>
@@ -121,12 +121,13 @@ export function createUI({ entries, onTravel, onSound, isMuted, onCar, getCar })
     if (e.target.closest('[data-close]') || e.target === garage) return toggle(garage, false);
     const b = e.target.closest('[data-car]'); if (b) { onCar(b.dataset.car); renderGarage(); }
   });
-  const anyOpen = () => !menu.hidden || !cv.hidden || !garage.hidden;
-  $('#btn-car').onclick = () => toggle(garage); $('#btn-map').onclick = () => toggle(menu); $('#btn-cv').onclick = () => toggle(cv);
+  trophies.addEventListener('click', (e) => { if (e.target.closest('[data-close]') || e.target === trophies) toggle(trophies, false); });
+  const anyOpen = () => !menu.hidden || !cv.hidden || !garage.hidden || !trophies.hidden;
+  $('#btn-tro').onclick = () => toggle(trophies); $('#btn-car').onclick = () => toggle(garage); $('#btn-map').onclick = () => toggle(menu); $('#btn-cv').onclick = () => toggle(cv);
   const sBtn = $('#btn-sound'); sBtn.onclick = () => { onSound(); sBtn.textContent = isMuted() ? 'Sound off' : 'Sound on'; };
 
   return {
-    visited, show, discover, toast, setPrompt, drawMap, toggle, menu, cv, anyOpen, garage, closeAll() { toggle(menu, false); toggle(cv, false); toggle(garage, false); },
+    visited, show, discover, toast, setPrompt, drawMap, toggle, menu, cv, anyOpen, garage, trophies, closeAll() { toggle(menu, false); toggle(cv, false); toggle(garage, false); toggle(trophies, false); },
     setSpeed(v, boost) { $('#speed').textContent = Math.round(Math.abs(v) * 3.6); $('#boost').style.width = (boost * 100).toFixed(0) + '%'; },
     soundLabel() { sBtn.textContent = isMuted() ? 'Sound off' : 'Sound on'; },
   };

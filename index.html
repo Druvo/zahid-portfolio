@@ -28,6 +28,9 @@
         <span><kbd>V</kbd> change car</span>
         <span><kbd>G</kbd> low/high graphics</span>
         <span><kbd>L</kbd> time of day</span>
+        <span><kbd>K</kbd> rain</span>
+        <span><kbd>P</kbd> photo mode</span>
+        <span><kbd>J</kbd> trophies</span>
         <span><kbd>`</kbd> dev terminal</span>
         <span><kbd>T</kbd> tidy props</span>
         <span><kbd>C</kbd> plain CV</span>
@@ -47,6 +50,8 @@
       <div class="chip" id="lap">Lap <b id="lapt">--</b> · Best <b id="best">--</b></div>
       <div class="chip" id="progress">Places found <b id="found">0</b>/<span id="total">0</span></div>
       <button class="icon" id="btn-q" title="Graphics quality (G)">Quality: High</button>
+      <button class="icon" id="btn-tro" title="Trophies (J)">Trophies 0/12</button>
+      <button class="icon" id="btn-photo" title="Photo mode (P)">Photo</button>
       <button class="icon" id="btn-car" title="Garage (V)">Garage</button>
       <button class="icon" id="btn-map" title="Fast travel (M)">Map</button>
       <button class="icon" id="btn-cv" title="Plain CV (C)">CV</button>
@@ -70,6 +75,8 @@
   <div id="mapmenu" class="overlay panel" hidden></div>
   <div id="cv" class="overlay panel" hidden></div>
   <div id="garage" class="overlay panel" hidden></div>
+  <div id="trophies" class="overlay panel" hidden></div>
+  <div id="photobar"><button id="shot" class="btn primary">Capture PNG</button><button id="shot-exit" class="btn ghost">Exit photo mode</button><small>Drag to orbit, wheel to zoom</small></div>
 
   <noscript><p style="color:#fff;padding:2rem">Zahid Hasan — Senior Software Engineer. This portfolio needs JavaScript and WebGL. Email: zhdruvo@gmail.com · linkedin.com/in/zhdruvo</p></noscript>
   <script type="module" src="/src/main.js"></script>

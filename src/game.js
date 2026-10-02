@@ -74,6 +74,13 @@ export function createGame({ scene, van, startAngle, onAllPackets }) {
   });
 
   // ----- lap timer -----
+  // ghost of the best lap
+  let rec = [], recT = 0, wasStarted = false, ghost = null;
+  try { const gs = JSON.parse(localStorage.getItem('zh-ghost') || 'null'); if (gs && gs.d && gs.d.length > 30) ghost = gs; } catch { /* ignore */ }
+  const ghostMesh = new THREE.Group();
+  { const gm = new THREE.MeshBasicMaterial({ color: 0x7fe9ff, transparent: true, opacity: 0.32, depthWrite: false });
+    const b1 = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.45, 4.2), gm); b1.position.y = 0.5; const b2 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.35, 1.3), gm); b2.position.set(0, 0.95, -0.3);
+    ghostMesh.add(b1, b2); ghostMesh.visible = false; scene.add(ghostMesh); }
   let started = false, lapStart = 0, prog = 0, prevAng = null, now = 0, best = Infinity;
   try { const b = parseFloat(localStorage.getItem('zh-best')); if (b > 0) best = b; } catch { /* ignore */ }
   upd.push((t, dt, vp) => {
@@ -87,8 +94,20 @@ export function createGame({ scene, van, startAngle, onAllPackets }) {
     if (prog < -0.4) { started = false; return; }
     if (prog >= Math.PI * 2 - 0.02) {
       const lap = t - lapStart; lapStart = t; prog -= Math.PI * 2;
-      const isBest = lap < best; if (isBest) { best = lap; try { localStorage.setItem('zh-best', String(lap)); } catch { /* ignore */ } }
+      const isBest = lap < best; if (isBest) { best = lap; ghost = { lap, d: rec.slice() }; try { localStorage.setItem('zh-best', String(lap)); localStorage.setItem('zh-ghost', JSON.stringify(ghost)); } catch { /* ignore */ } }
+      rec = []; recT = 0;
       api.onLap?.(lap, isBest);
+    }
+  });
+
+  upd.push((t, dt) => {
+    if (started && !wasStarted) { rec = []; recT = 0; }
+    wasStarted = started;
+    if (!started) { ghostMesh.visible = false; return; }
+    recT += dt; if (recT >= 0.1) { recT -= 0.1; const f = van.forward(); rec.push(+van.group.position.x.toFixed(1), +van.group.position.z.toFixed(1), +Math.atan2(f.x, f.z).toFixed(2)); }
+    if (ghost) {
+      const i = (t - lapStart) / 0.1, k = Math.floor(i) * 3;
+      if (k + 5 < ghost.d.length) { const f = i - Math.floor(i), D = ghost.d; ghostMesh.position.set(D[k] + (D[k + 3] - D[k]) * f, 0, D[k + 1] + (D[k + 4] - D[k + 1]) * f); ghostMesh.rotation.y = D[k + 2]; ghostMesh.visible = true; } else ghostMesh.visible = false;
     }
   });
 

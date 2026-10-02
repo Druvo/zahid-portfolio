@@ -46,3 +46,7 @@ All text lives in `src/data.js`. Station layout/angles are there too; 3D builder
 - **Dev terminal** (`` ` ``): `help`, `whoami`, `projects`, `skills`, `goto <id>`, `car`, `sky`, `quality`, `stats`... and a `sudo` easter egg.
 - **Graphics** (G): low/high; auto-drops to low on slow machines.
 - **Cars** (V / Garage): Apex GT, Rally Hatch, Dune Buggy, ZH.NET Van.
+- **Rain & storms** (K): wet road, fog, thunder and lightning.
+- **Photo mode** (P): free orbit camera, capture a PNG.
+- **Trophies** (J): 12 achievements saved in your browser.
+- **Best-lap ghost**, an airship with a hiring banner, and fireworks when you find every place (`party` in the terminal).

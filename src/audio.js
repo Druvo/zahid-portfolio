@@ -41,3 +41,27 @@ export const bump = (v = 1) => tone(90, 0.12, 'sine', Math.min(0.25, 0.05 * v), 
 export const zap = () => { tone(260, 0.35, 'sawtooth', 0.1, 1100); };
 export const coin = () => { tone(988, 0.12, 'square', 0.07); tone(1318, 0.2, 'square', 0.07, null, 0.07); };
 export const lap = () => { tone(523, 0.2, 'triangle', 0.15); tone(659, 0.2, 'triangle', 0.15, null, 0.12); tone(784, 0.4, 'triangle', 0.15, null, 0.24); };
+
+// ----- weather / fx -----
+let rainSrc = null, rainGain = null;
+export function rain(on) {
+  if (!ctx) return;
+  if (!rainSrc) {
+    const len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    rainSrc = ctx.createBufferSource(); rainSrc.buffer = buf; rainSrc.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3200; bp.Q.value = 0.6;
+    rainGain = ctx.createGain(); rainGain.gain.value = 0; rainSrc.connect(bp); bp.connect(rainGain); rainGain.connect(master); rainSrc.start();
+  }
+  rainGain.gain.setTargetAtTime(on ? 0.09 : 0, ctx.currentTime, 0.6);
+}
+function noiseBurst(dur, freq, vol, delay = 0) {
+  if (!ctx) return;
+  const len = Math.floor(ctx.sampleRate * dur), buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const src = ctx.createBufferSource(); src.buffer = buf; const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = freq;
+  const g = ctx.createGain(); g.gain.value = vol; src.connect(f); f.connect(g); g.connect(master); src.start(ctx.currentTime + delay);
+}
+export const thunder = () => noiseBurst(2.4, 260, 0.5, 0.4);
+export const boom = () => noiseBurst(0.5, 700, 0.18);
+export const click = () => tone(1400, 0.05, 'square', 0.05);

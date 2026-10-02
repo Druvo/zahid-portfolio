@@ -142,3 +142,17 @@ h1 span { color: var(--amber); }
 .term-in { display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); color: var(--cyan); }
 .term-in input { flex: 1; background: none; border: 0; outline: 0; color: var(--ink); font: inherit; }
 @media (max-width: 640px) { #packets, #lap { display: none; } }
+
+/* trophies + photo mode */
+.trophies { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 1rem; }
+.trophy { padding: 12px 14px; border-radius: 12px; background: rgba(255, 255, 255, .04); border: 1px solid var(--line); opacity: .55; }
+.trophy.got { opacity: 1; border-color: var(--amber); background: rgba(255, 179, 71, .08); }
+.trophy b { display: block; font-size: .92rem; }
+.trophy small { color: var(--mute); }
+#photobar { display: none; position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 12; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(10px); }
+body.photo #photobar { display: flex; }
+body.photo #hud, body.photo #term { display: none !important; }
+#photobar .btn { padding: .55rem 1.1rem; font-size: .85rem; }
+.btn.ghost { background: rgba(255, 255, 255, .08); color: var(--ink); border: 1px solid var(--line); }
+#photobar small { color: var(--mute); }
+@media (max-width: 640px) { #photobar small { display: none; } }

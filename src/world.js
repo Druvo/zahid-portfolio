@@ -36,7 +36,7 @@ export function createWorld(scene, renderer) {
   });
   const sky = new THREE.Mesh(new THREE.SphereGeometry(700, 32, 16), skyMat); sky.renderOrder = -10; scene.add(sky);
 
-  let starsMat, sunSprite; const lampMats = [];
+  let starsMat, sunSprite, roadMat; const lampMats = []; let wetT = 0, wet = 0, flash = 0;
   // stars
   {
     const n = 700, p = new Float32Array(n * 3);
@@ -139,7 +139,7 @@ export function createWorld(scene, renderer) {
     });
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     const road = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
-    road.receiveShadow = true; scene.add(road);
+    road.receiveShadow = true; scene.add(road); roadMat = road.material;
   }
 
   // timeline year markers painted on road
@@ -224,21 +224,24 @@ export function createWorld(scene, renderer) {
   function applyMood() {
     const u = skyMat.uniforms; u.uLow.value.copy(cur.low); u.uMid.value.copy(cur.mid); u.uTop.value.copy(cur.top); u.uBelow.value.copy(cur.below);
     scene.fog.color.copy(cur.fog); scene.background.copy(cur.fog);
-    hemi.color.copy(cur.hemiSky); hemi.groundColor.copy(cur.hemiGround); hemi.intensity = cur.hemiI;
-    sunL.color.copy(cur.sun); sunL.intensity = cur.sunI; sunOffset.copy(cur.off);
-    renderer.toneMappingExposure = cur.exposure; starsMat.opacity = cur.stars; scene.environmentIntensity = cur.env; sunSprite.material.opacity = cur.disc;
+    hemi.color.copy(cur.hemiSky); hemi.groundColor.copy(cur.hemiGround); hemi.intensity = cur.hemiI + flash * 2.5;
+    sunL.color.copy(cur.sun); sunL.intensity = cur.sunI * (1 - 0.6 * wet);
+    scene.fog.near = 110 * (1 - 0.5 * wet); scene.fog.far = 420 * (1 - 0.45 * wet);
+    roadMat.roughness = 0.95 - 0.62 * wet; roadMat.color.setScalar(1 - 0.35 * wet); sunOffset.copy(cur.off);
+    renderer.toneMappingExposure = cur.exposure; starsMat.opacity = cur.stars * (1 - wet); scene.environmentIntensity = cur.env; sunSprite.material.opacity = cur.disc;
     for (const m of lampMats) m.emissiveIntensity = cur.lamp;
   }
   applyMood();
   function easeMood(dt) {
     const k = 1 - Math.exp(-dt * 2.2), t = MOODS[mood];
+    wet += (wetT - wet) * (1 - Math.exp(-dt * 1.2)); flash = Math.max(0, flash - dt * 3.5);
     for (const key of Object.keys(cur)) { if (cur[key].isColor || cur[key].isVector3) cur[key].lerp(t[key], k); else cur[key] += (t[key] - cur[key]) * k; }
     applyMood();
   }
 
   return {
     curve, sun: sunL, MOODS,
-    get mood() { return mood; }, setMood(m) { if (MOODS[m]) mood = m; return MOODS[mood].name; },
+    get mood() { return mood; }, get wetness() { return wet; }, setWet(v) { wetT = v; }, strike() { flash = 1; }, setMood(m) { if (MOODS[m]) mood = m; return MOODS[mood].name; },
     update(t, dt, focus) {
       easeMood(dt);
       updaters.forEach((u) => u(t, dt));
