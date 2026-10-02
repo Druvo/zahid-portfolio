@@ -55,9 +55,11 @@ export function createUI({ entries, onTravel, onSound, isMuted, onCar, getCar, t
     const st = entry.st;
     card.style.setProperty('--accent', st.color);
     card.innerHTML = st.bullets ? projectHTML(st) : hubHTML[st.kind]();
+    card.insertAdjacentHTML('beforeend', `<button class="copylink" data-link="${st.id}">Copy link to this place</button>`);
     card.scrollTop = 0; card.classList.add('on');
   }
 
+  card.addEventListener('click', (e) => { const b = e.target.closest('[data-link]'); if (!b) return; const url = location.origin + location.pathname + '#' + b.dataset.link; (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => { b.textContent = 'Link copied'; }, () => { b.textContent = url; }); });
   function toast(msg, ms = 3200) { toastEl.textContent = msg; toastEl.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('on'), ms); }
 
   function discover(entry) {

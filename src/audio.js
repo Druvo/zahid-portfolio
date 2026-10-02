@@ -65,3 +65,29 @@ function noiseBurst(dur, freq, vol, delay = 0) {
 export const thunder = () => noiseBurst(2.4, 260, 0.5, 0.4);
 export const boom = () => noiseBurst(0.5, 700, 0.18);
 export const click = () => tone(1400, 0.05, 'square', 0.05);
+
+// ----- generative ambient pad (follows the master mute) -----
+let musicOn = false, musicTimer = null, musicGain = null;
+const CHORDS = [[220, 261.63, 329.63], [174.61, 220, 261.63], [196, 246.94, 293.66], [164.81, 207.65, 246.94]];
+const PENTA = [440, 493.88, 554.37, 659.25, 739.99, 880];
+function pad(freqs, t0, dur) {
+  for (const f of freqs) {
+    const o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
+    o.type = 'triangle'; o.frequency.value = f; o.detune.value = (Math.random() - 0.5) * 12; lp.type = 'lowpass'; lp.frequency.value = 700;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.5, t0 + dur * 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(lp); lp.connect(g); g.connect(musicGain); o.start(t0); o.stop(t0 + dur + 0.1);
+  }
+}
+export function music(on) {
+  if (!ctx) return; musicOn = on;
+  if (!musicGain) { musicGain = ctx.createGain(); musicGain.gain.value = 0.05; musicGain.connect(master); }
+  clearInterval(musicTimer); if (!on) return;
+  let step = 0;
+  const play = () => {
+    if (!musicOn || ctx.state !== 'running') return;
+    const t0 = ctx.currentTime + 0.05; pad(CHORDS[step % CHORDS.length], t0, 7.5);
+    for (let k = 0; k < 3; k++) { const f = PENTA[Math.floor(Math.random() * PENTA.length)], t = t0 + 1.2 + k * 1.7 + Math.random() * 0.6; tone(f, 1.4, 'sine', 0.05, null, t - ctx.currentTime); }
+    step++;
+  };
+  play(); musicTimer = setInterval(play, 6500);
+}

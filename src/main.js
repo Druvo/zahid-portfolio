@@ -12,6 +12,7 @@ import { createGame } from './game.js';
 import { createTerminal } from './terminal.js';
 import { createRain, createBlimp, createFireworks } from './extras.js';
 import { createAchievements } from './achievements.js';
+import { roadPoint as roadPt } from './world.js';
 import { input, pollInput, setupTouch, onKey } from './input.js';
 import { createUI } from './ui.js';
 import * as audio from './audio.js';
@@ -107,7 +108,7 @@ async function boot() {
   // ----- dev terminal (`) -----
   const term = createTerminal({
     entries, goto: travel, setCar: (k) => pickCar(k), cars: () => available(), setMood: (m) => { setSky(m); }, moods: MOOD_KEYS,
-    setQuality: (q) => applyQuality(q), game, weather: (on) => setRain(on), party: () => fw.show(8), onOpen: () => ach.unlock('hacker'),
+    setQuality: (q) => applyQuality(q), game, tour: () => startTour(), weather: (on) => setRain(on), party: () => fw.show(8), onOpen: () => ach.unlock('hacker'),
   });
   progress(100);
 
@@ -121,6 +122,8 @@ async function boot() {
   addEventListener('pointermove', (e) => { if (drag) { camOff -= (e.clientX - lx) * 0.006; lx = e.clientX; if (photo) { camPitch = THREE.MathUtils.clamp(camPitch + (e.clientY - ly) * 0.005, -0.05, 1.4); } ly = e.clientY; } });
 
   onKey((k) => {
+    konamiKey(k);
+    if (k === 'KeyO' && !introMode) $('#btn-tour').click();
     if (k === 'Escape') { ui.closeAll(); term.close(); if (photo) setPhoto(false); }
     if (k === 'KeyP' && !introMode) setPhoto(!photo);
     if (k === 'KeyK' && !introMode) setRain(!rainOn);
@@ -136,6 +139,48 @@ async function boot() {
     if (k === 'Enter' && introMode) start();
   });
 
+  // ----- guided tour (autopilot along the timeline road) -----
+  const tourList = [entries.find((e) => e.st.id === 'about'), ...entries.filter((e) => e.st.angle !== undefined).sort((a, b) => a.st.angle - b.st.angle), entries.find((e) => e.st.id === 'contact')].filter(Boolean);
+  const tr = { on: false, idx: 0, dwell: 0, stuck: 0 };
+  const normA = (a) => ((a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+  function startTour() {
+    if (introMode) start();
+    ui.closeAll(); term.close(); setPhoto(false);
+    tr.on = true; tr.idx = 0; tr.dwell = 0; tr.stuck = 0;
+    const a0 = Math.atan2(van.group.position.x, van.group.position.z); const first = tourList[0];
+    ui.toast('Guided tour: sit back. Press any drive key to take over.', 4500);
+    $('#btn-tour').textContent = 'Stop tour'; void a0; void first;
+  }
+  function stopTour(done = false) {
+    if (!tr.on) return; tr.on = false; $('#btn-tour').textContent = 'Auto tour';
+    if (done) { ui.toast('Tour finished. Now explore the middle of the island: skills, awards, lab.', 6000); ach.unlock('tour'); fw.show(7); }
+  }
+  function autopilot(dt, inp) {
+    const vp = van.group.position, f = van.forward(), a = Math.atan2(vp.x, vp.z);
+    const target = tourList[tr.idx];
+    if (!target) { stopTour(true); return; }
+    // stop and read each stop's card, then roll on
+    if (active === target && tr.dwell <= 0) tr.dwell = 6.5;
+    if (tr.dwell > 0) { tr.dwell -= dt; inp.brake = true; inp.throttle = 0; if (tr.dwell <= 0) tr.idx++; return; }
+    const la = a + 0.17, tp = roadPt(la), want = Math.atan2(tp.x - vp.x, tp.z - vp.z), heading = Math.atan2(f.x, f.z);
+    inp.steer = THREE.MathUtils.clamp(normA(want - heading) * 2.6, -1, 1);
+    inp.throttle = van.speed < 12 ? 1 : 0; inp.brake = false; inp.boost = false;
+    tr.stuck = Math.abs(van.speed) < 0.8 ? tr.stuck + dt : 0;
+    if (tr.stuck > 2) { tr.stuck = 0; const p = roadPt(a + 0.04); van.spawn.copy(p); van.heading = a + 0.04 + Math.PI / 2; van.reset(); }
+  }
+  $('#btn-tour').onclick = () => (tr.on ? stopTour() : startTour());
+  $('#start-tour').onclick = () => startTour();
+
+  // ----- Konami code -----
+  const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA']; let kpos = 0, lowG = false;
+  function konamiKey(k) {
+    kpos = k === KONAMI[kpos] ? kpos + 1 : (k === KONAMI[0] ? 1 : 0);
+    if (kpos === KONAMI.length) { kpos = 0; lowG = !lowG; world.gravity.y = lowG ? -10 : -32; ui.toast(lowG ? 'Konami! Low gravity on. Hop away.' : 'Gravity restored', 4000); ach.unlock('konami'); fw.show(4); }
+  }
+
+  // ----- deep links: #station-id -----
+  function hashEntry() { const id = decodeURIComponent((location.hash || '').slice(1)); return id ? entries.find((e) => e.st.id === id) : null; }
+
   function setPhoto(on) {
     photo = on; document.body.classList.toggle('photo', on);
     if (on) { zoom = 9; camPitch = 0.3; ui.closeAll(); term.close(); } else { zoom = 12; }
@@ -148,13 +193,14 @@ async function boot() {
   $('#btn-photo').onclick = () => setPhoto(true);
   function start() {
     if (!introMode) return;
-    introMode = false; audio.initAudio();
+    introMode = false; audio.initAudio(); audio.music(!muted);
     $('#intro').classList.add('hide'); $('#hud').hidden = false;
-    setTimeout(() => ui.toast('Drive forward to explore. Follow the amber road, or press M to fast travel.', 5000), 700);
+    const deep = hashEntry(); if (deep) setTimeout(() => travel(deep), 500);
+    else setTimeout(() => ui.toast('Drive forward to explore. Follow the amber road, or press M to fast travel. Or press O for a guided tour.', 6000), 700);
   }
   applyQuality(quality, false);
   $('#btn-q').onclick = () => { applyQuality(quality === 'low' ? 'high' : 'low'); ui.toast(quality === 'low' ? 'Low quality: bloom, shadows and sharpness reduced' : 'High quality on'); };
-  startBtn.disabled = false; startBtn.textContent = 'Start driving →'; startBtn.onclick = start;
+  startBtn.disabled = false; startBtn.textContent = 'Start driving →'; startBtn.onclick = start; $('#start-tour').disabled = false;
 
   // ----- resize -----
   function resize() {
@@ -166,6 +212,8 @@ async function boot() {
 
   // ----- loop -----
   let hudT = 0, fpsT = 0, fpsN = 0, fpsSum = 0, autoDone = false;
+  let lastHashed = null, compassTarget = null, compassDist = 0;
+  const cmp = $('#compass'), cmpArrow = cmp.querySelector('i'), cmpDist = $('#cdist');
   const clock = new THREE.Clock(); let t = 0, active = null, wasRoad = false;
   const lerpAngle = (a, b, k) => { let d = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; return a + d * k; };
 
@@ -174,7 +222,8 @@ async function boot() {
     if (innerWidth !== sw || innerHeight !== sh) resize();
     const dt = Math.min(clock.getDelta(), 0.05); t += dt;
     const inp = introMode ? { throttle: 0, steer: 0, boost: false, brake: true, hop: false, honk: false, reset: false } : pollInput();
-    if (!introMode && (ui.anyOpen() || term.isOpen || photo)) { inp.throttle = 0; inp.steer = 0; inp.boost = false; }
+    if (!introMode && tr.on) { if (inp.throttle || inp.steer || inp.hop || inp.brake) stopTour(); else autopilot(dt, inp); }
+    if (!introMode && (ui.anyOpen() || term.isOpen || photo) && !tr.on) { inp.throttle = 0; inp.steer = 0; inp.boost = false; }
     van.update(dt, inp, t);
     world.step(1 / 60, dt, 3);
     for (const s of synced) { const b = s.body; if (b.sleepState === 2) continue; s.mesh.position.copy(b.position); s.mesh.quaternion.copy(b.quaternion); }
@@ -190,11 +239,13 @@ async function boot() {
       if (active && active.dist < active.radius + 2) { /* stay */ } else active = best && best.dist < best.radius ? best : null;
       if (active) { if (ui.discover(active)) { audio.chime(); ach.unlock('first'); if (ui.visited.size === entries.length) { ach.unlock('carto'); fw.show(9); } } }
       ui.show(active);
+      if (active !== lastHashed) { lastHashed = active; if (active) { try { history.replaceState(null, '', '#' + active.st.id); } catch { /* ignore */ } } }
       if (!active) {
         let nb = null, nd = 1e9;
         for (const e of entries) if (!ui.visited.has(e.st.id) && e.dist < nd) { nd = e.dist; nb = e; }
+        compassTarget = nb; compassDist = nd;
         ui.setPrompt(nb ? 'Next stop: ' + nb.st.title.split(' - ')[0] + '  ·  ' + Math.round(nd) + ' m' : 'You found every place. Press M to revisit.');
-      } else ui.setPrompt('');
+      } else { ui.setPrompt(''); compassTarget = null; }
     }
     for (const e of entries) {
       e.update(t, dt, e.f, vp);
@@ -233,6 +284,7 @@ async function boot() {
       camera.lookAt(look);
       const fov = 55 + speedK * 6 + (van.boosting ? 7 : 0); camera.fov += (fov - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix();
       ui.setSpeed(van.speed, van.boostEnergy); ui.drawMap(vp, van.heading);
+      if (compassTarget && !photo) { cmp.hidden = false; const b = Math.atan2(compassTarget.g.position.x - vp.x, compassTarget.g.position.z - vp.z); cmpArrow.style.transform = 'rotate(' + (camYaw - b) + 'rad)'; cmpDist.textContent = Math.round(compassDist) + ' m'; } else cmp.hidden = true;
       if (quality !== 'low') bloom.strength = 0.14 + (van.boosting ? 0.1 : 0);
     }
     renderFrame();

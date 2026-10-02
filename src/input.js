@@ -44,6 +44,20 @@ export function setupTouch(root) {
   input._boostTouch = () => boostHeld;
 }
 
+const padPrev = { hop: false, honk: false };
+function readPad() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : []; const p = pads && [...pads].find((x) => x && x.connected);
+  if (!p) return null;
+  const dz = (v) => (Math.abs(v) < 0.15 ? 0 : v);
+  const trig = (i) => (p.buttons[i] ? p.buttons[i].value : 0);
+  const out = { steer: -dz(p.axes[0] || 0), throttle: trig(7) - trig(6) || -dz(p.axes[1] || 0), boost: !!(p.buttons[2] && p.buttons[2].pressed), brake: !!(p.buttons[1] && p.buttons[1].pressed) };
+  const hop = !!(p.buttons[0] && p.buttons[0].pressed), honk = !!(p.buttons[3] && p.buttons[3].pressed);
+  if (hop && !padPrev.hop) edge.hop = true; if (honk && !padPrev.honk) edge.honk = true;
+  padPrev.hop = hop; padPrev.honk = honk;
+  out.active = out.steer !== 0 || out.throttle !== 0 || hop || honk;
+  return out;
+}
+
 export function pollInput() {
   const k = (c) => keys.has(c);
   const up = k('KeyW') || k('ArrowUp'), dn = k('KeyS') || k('ArrowDown');
@@ -54,6 +68,8 @@ export function pollInput() {
   input.boost = k('ShiftLeft') || k('ShiftRight') || !!(input._boostTouch && input._boostTouch());
   input.brake = k('KeyX') || k('ControlLeft');
   input.camLook = (k('KeyQ') ? 1 : 0) - (k('KeyE') ? 1 : 0);
+  const gp = readPad();
+  if (gp && gp.active) { input.steer = gp.steer; input.throttle = gp.throttle; input.boost = input.boost || gp.boost; input.brake = input.brake || gp.brake; }
   input.hop = edge.hop; input.honk = edge.honk; input.reset = edge.reset;
   edge.hop = edge.honk = edge.reset = false;
   return input;

@@ -156,3 +156,11 @@ body.photo #hud, body.photo #term { display: none !important; }
 .btn.ghost { background: rgba(255, 255, 255, .08); color: var(--ink); border: 1px solid var(--line); }
 #photobar small { color: var(--mute); }
 @media (max-width: 640px) { #photobar small { display: none; } }
+
+.startrow { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn.ghost:disabled { opacity: .5; cursor: wait; }
+#compass { position: absolute; left: 18px; top: 62px; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-size: .78rem; font-weight: 600; color: var(--mute); backdrop-filter: blur(10px); }
+#compass[hidden] { display: none; }
+#compass i { display: inline-block; color: var(--amber); font-style: normal; font-size: 1.05rem; transition: transform .1s linear; }
+.copylink { margin-top: .8rem; width: 100%; padding: .55rem; border-radius: 10px; border: 1px solid var(--line); background: rgba(255, 255, 255, .06); color: var(--mute); font-weight: 600; font-size: .78rem; }
+.copylink:hover { background: rgba(255, 255, 255, .13); color: var(--ink); }

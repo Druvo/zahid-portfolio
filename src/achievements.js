@@ -11,6 +11,8 @@ export const DEFS = [
   { id: 'hacker', title: 'Hello, World', desc: 'Open the dev terminal.' },
   { id: 'storm', title: 'Storm Chaser', desc: 'Drive through the rain.' },
   { id: 'photo', title: 'Photographer', desc: 'Capture a photo in photo mode.' },
+  { id: 'tour', title: 'Guided', desc: 'Sit back and finish the guided tour.' },
+  { id: 'konami', title: 'Old School', desc: 'Enter the Konami code.' },
 ];
 
 export function createAchievements({ onUnlock }) {

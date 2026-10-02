@@ -301,6 +301,7 @@ const builders = {
     g.add(at(box(8.6, 0.55, 0.7, 0x151a28), 0, 6.5, 0)); g.add(at(box(9.6, 0.5, 0.9, red, rm), 0, 6.95, 0));
     g.add(at(box(7.2, 0.4, 0.5, red, rm), 0, 5.2, 0));
     const tab = sign('FBSC', { w: 1.4, h: 1.5, accent: '#ff5d5d', sub: 'JP' }); tab.position.set(0, 5.9, 0.4); g.add(tab);
+    const jp = sprite('ようこそ · Welcome', { scale: 0.9, color: '#ff9f9f', bg: 'rgba(10,14,24,.75)' }); jp.position.set(0, 8.4, 0); g.add(jp);
     // databases + SSIS pipe
     const db = (x, color, label) => { const d = new THREE.Group(); for (let i = 0; i < 3; i++) d.add(at(cyl(1.5, 1.5, 0.9, i % 2 ? 0x2a3350 : color, { emissive: i % 2 ? 0 : color, ei: 0.35, metal: 0.3 }, 24), 0, 0.6 + i * 1.0, 0)); d.position.set(x, 0, -5.4); g.add(d); colliderIn(g, x, 1.6, -5.4, 3, 3.2, 3); const s = sprite(label, { scale: 0.8, color: '#fff', bg: 'rgba(10,14,24,.75)' }); s.position.set(x, 4.2, -5.4); g.add(s); };
     db(-5.2, C.cyan, 'System A'); db(5.2, C.amber, 'System B');

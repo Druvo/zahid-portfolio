@@ -1,7 +1,7 @@
 import { profile, jobs, skills, exploring, awards, education, stations } from './data.js';
 
 // In-page dev console (backtick). Because a backend engineer's portfolio should have a shell.
-export function createTerminal({ entries, goto, setCar, cars, setMood, moods, setQuality, game, weather, party, onOpen, onClose }) {
+export function createTerminal({ entries, goto, setCar, cars, setMood, moods, setQuality, game, weather, party, tour, onOpen, onClose }) {
   const el = document.createElement('div');
   el.id = 'term'; el.hidden = true;
   el.innerHTML = '<div class="term-bar"><span>zahid@portfolio:~$</span><button type="button" data-x>esc</button></div><div class="term-out" role="log"></div><form class="term-in" autocomplete="off"><span>&gt;</span><input type="text" spellcheck="false" autocapitalize="off" aria-label="terminal command" /></form>';
@@ -14,7 +14,7 @@ export function createTerminal({ entries, goto, setCar, cars, setMood, moods, se
   const findStation = (q) => { q = q.toLowerCase(); return entries.find((e) => e.st.id === q) || entries.find((e) => e.st.id.includes(q) || e.st.title.toLowerCase().includes(q)); };
 
   const cmds = {
-    help: () => print('commands: <b>whoami</b> · <b>experience</b> · <b>projects</b> · <b>skills</b> · <b>education</b> · <b>awards</b> · <b>exploring</b> · <b>contact</b><br>game: <b>goto &lt;id&gt;</b> · <b>car &lt;name&gt;</b> · <b>sky &lt;golden|day|night&gt;</b> · <b>quality &lt;low|high&gt;</b> · <b>rain [off]</b> · <b>party</b> · <b>stats</b> · <b>clear</b> · <b>exit</b>'),
+    help: () => print('commands: <b>whoami</b> · <b>experience</b> · <b>projects</b> · <b>skills</b> · <b>education</b> · <b>awards</b> · <b>exploring</b> · <b>contact</b><br>game: <b>goto &lt;id&gt;</b> · <b>car &lt;name&gt;</b> · <b>sky &lt;golden|day|night&gt;</b> · <b>quality &lt;low|high&gt;</b> · <b>rain [off]</b> · <b>party</b> · <b>tour</b> · <b>link</b> · <b>stats</b> · <b>clear</b> · <b>exit</b>'),
     whoami: () => print(`${esc(profile.name)} — ${esc(profile.title)}<br>${esc(profile.summary)}`),
     experience: () => jobs.slice().reverse().forEach(([r, c, p]) => print(`${esc(p).padEnd(18)} ${esc(r)} @ ${esc(c)}`)),
     projects: () => stations.forEach((s) => print(`<b>${esc(s.id)}</b> — ${esc(s.title.split(' - ')[0])} <i>(${esc(s.period)})</i>`)),
@@ -28,6 +28,8 @@ export function createTerminal({ entries, goto, setCar, cars, setMood, moods, se
     sky: (a) => { if (!moods.includes(a)) return print('sky: ' + moods.join(' | '), 'err'); setMood(a); print('sky set to ' + a); },
     quality: (a) => { if (a !== 'low' && a !== 'high') return print('quality: low | high', 'err'); setQuality(a); print('graphics: ' + a); },
     rain: (a) => { weather(a !== 'off'); print('rain ' + (a === 'off' ? 'off' : 'on')); },
+    tour: () => { tour(); print('guided tour started. press any drive key to stop.'); },
+    link: () => print(esc(location.href)),
     party: () => { party(); print('fireworks launched'); },
     stats: () => print(`packets delivered: ${game.collected}/${game.N}<br>lap: ${game.lapText()} · best: ${game.bestText()}`),
     clear: () => { out.innerHTML = ''; },

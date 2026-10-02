@@ -31,11 +31,12 @@
         <span><kbd>K</kbd> rain</span>
         <span><kbd>P</kbd> photo mode</span>
         <span><kbd>J</kbd> trophies</span>
+        <span><kbd>O</kbd> guided tour</span>
         <span><kbd>`</kbd> dev terminal</span>
         <span><kbd>T</kbd> tidy props</span>
         <span><kbd>C</kbd> plain CV</span>
       </div>
-      <button id="start" class="btn primary" disabled>Loading world…</button>
+      <div class="startrow"><button id="start" class="btn primary" disabled>Loading world…</button><button id="start-tour" class="btn ghost" disabled>Sit back: guided tour</button></div>
       <div class="bar"><i id="load-bar"></i></div>
     </div>
   </div>
@@ -50,6 +51,7 @@
       <div class="chip" id="lap">Lap <b id="lapt">--</b> · Best <b id="best">--</b></div>
       <div class="chip" id="progress">Places found <b id="found">0</b>/<span id="total">0</span></div>
       <button class="icon" id="btn-q" title="Graphics quality (G)">Quality: High</button>
+      <button class="icon" id="btn-tour" title="Guided tour (O)">Auto tour</button>
       <button class="icon" id="btn-tro" title="Trophies (J)">Trophies 0/12</button>
       <button class="icon" id="btn-photo" title="Photo mode (P)">Photo</button>
       <button class="icon" id="btn-car" title="Garage (V)">Garage</button>
@@ -57,6 +59,7 @@
       <button class="icon" id="btn-cv" title="Plain CV (C)">CV</button>
       <button class="icon" id="btn-sound" title="Sound (N)">Sound on</button>
     </div>
+    <div id="compass" hidden><i>▲</i><span id="cdist"></span></div>
     <div id="prompt"></div>
     <div id="card" class="card" aria-live="polite"></div>
     <div class="bottomleft">
