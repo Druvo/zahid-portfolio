@@ -7,7 +7,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { world, synced } from './core.js';
 import { createWorld, roadPoint, polar, DEG } from './world.js';
 import { buildAll } from './props.js';
-import { Van } from './vehicle.js';
+import { Van, MODELS } from './vehicle.js';
 import { input, pollInput, setupTouch, onKey } from './input.js';
 import { createUI } from './ui.js';
 import * as audio from './audio.js';
@@ -47,7 +47,9 @@ async function boot() {
   progress(80); await frame();
 
   const spawnA = -34 * DEG, spawnP = roadPoint(spawnA);
-  const van = new Van(scene, spawnP, spawnA + Math.PI / 2);
+  let saved = 'racer'; try { saved = localStorage.getItem('zh-car') || 'racer'; } catch { /* ignore */ }
+  const van = new Van(scene, spawnP, spawnA + Math.PI / 2, saved);
+  const pickCar = (k) => { van.setModel(k); try { localStorage.setItem('zh-car', k); } catch { /* ignore */ } ui.toast('Now driving: ' + van.model.name); };
   scene.updateMatrixWorld(true);
 
   let muted = false;
@@ -58,7 +60,7 @@ async function boot() {
       p.y = 0; if (e.st.onRoad) p.addScaledVector(new THREE.Vector3(Math.sin(e.g.rotation.y + Math.PI / 2), 0, Math.cos(e.g.rotation.y + Math.PI / 2)), -14);
       van.spawn.copy(p); van.heading = Math.atan2(e.g.position.x - p.x, e.g.position.z - p.z); van.reset(); camYaw = van.heading; snap = true;
     },
-    onSound() { muted = !muted; audio.setMuted(muted); }, isMuted: () => muted,
+    onSound() { muted = !muted; audio.setMuted(muted); }, isMuted: () => muted, onCar: (k) => pickCar(k), getCar: () => van.model.key,
   });
   setupTouch(document);
   progress(100);
@@ -76,7 +78,8 @@ async function boot() {
     if (k === 'Escape') ui.closeAll();
     if (k === 'KeyM' && !introMode) ui.toggle(ui.menu);
     if (k === 'KeyC' && !introMode) ui.toggle(ui.cv);
-    if (k === 'KeyT' && !introMode) { for (const s of synced) { s.body.position.copy(s.home); s.body.quaternion.copy(s.homeQ); s.body.velocity.setZero(); s.body.angularVelocity.setZero(); s.body.wakeUp(); } ui.toast('Props tidied up'); }
+    if (k === 'KeyV' && !introMode) pickCar(MODELS[(MODELS.findIndex((x) => x.key === van.model.key) + 1) % MODELS.length].key);
+    if (k === 'KeyT'&& !introMode) { for (const s of synced) { s.body.position.copy(s.home); s.body.quaternion.copy(s.homeQ); s.body.velocity.setZero(); s.body.angularVelocity.setZero(); s.body.wakeUp(); } ui.toast('Props tidied up'); }
     if (k === 'KeyN') { muted = !muted; audio.setMuted(muted); ui.soundLabel(); }
     if (k === 'Enter' && introMode) start();
   });

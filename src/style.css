@@ -116,3 +116,13 @@ h1 span { color: var(--amber); }
 }
 @media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; } }
 @media (max-width: 640px) and (hover: hover) { .bottomleft { display: none; } }
+
+.cars { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 1rem; }
+.car { text-align: left; padding: 14px; border-radius: 14px; background: rgba(255, 255, 255, .05); border: 1px solid var(--line); border-top: 4px solid var(--c); color: var(--ink); font-family: inherit; transition: background .15s, transform .15s; }
+.car:hover { background: rgba(255, 255, 255, .1); transform: translateY(-2px); }
+.car.sel { background: rgba(255, 255, 255, .13); outline: 2px solid var(--c); }
+.car b { display: block; font-size: 1.05rem; }
+.car small { display: block; color: var(--mute); margin: 2px 0 10px; }
+.stat { display: flex; justify-content: space-between; font-size: .75rem; color: var(--mute); margin-top: 4px; }
+.pips { color: var(--c); letter-spacing: 2px; }
+.pips i { color: rgba(255, 255, 255, .18); font-style: normal; }

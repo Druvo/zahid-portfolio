@@ -1,6 +1,6 @@
 # Zahid Hasan — drive-through 3D portfolio
 
-Game-style portfolio built with Three.js + cannon-es. Drive the ZH.NET van around a floating
+Game-style portfolio built with Three.js + cannon-es. Drive a racing car (or rally hatch, dune buggy, ZH.NET van; press V) around a floating
 "integration island". The amber loop road is the career timeline (2018 → now); every project,
 skill, award and contact in the CV is a physical place on it.
 
@@ -13,7 +13,7 @@ npm run build    # static site in dist/ (deploy to GitHub Pages, Netlify, ...)
 ```
 
 ## Controls
-WASD / arrows drive · Shift boost · Space hop · H horn · X handbrake · Q/E or drag orbit camera ·
+V garage · WASD / arrows drive · Shift boost · Space hop · H horn · X handbrake · Q/E or drag orbit camera ·
 wheel zoom · M fast travel · C plain-text CV · T tidy props · R respawn · N mute.
 Touch: on-screen joystick + BOOST/HOP.
 
