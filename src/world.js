@@ -218,9 +218,9 @@ export function createWorld(scene, renderer) {
     night: { name: 'Night', low: C3(0x1b2238), mid: C3(0x0e1428), top: C3(0x04060f), below: C3(0x0a0d18), fog: C3(0x0a0e1c), hemiSky: C3(0x4a5a90), hemiGround: C3(0x10131f), hemiI: 0.5, sun: C3(0x9db4ff), sunI: 0.9, off: new THREE.Vector3(60, 70, 40), exposure: 1.05, stars: 0.9, env: 0.12, lamp: 3.4, disc: 0 },
   };
   const cur = { low: C3(0), mid: C3(0), top: C3(0), below: C3(0), fog: C3(0), hemiSky: C3(0), hemiGround: C3(0), sun: C3(0), off: new THREE.Vector3(), hemiI: 0, sunI: 0, exposure: 1, stars: 0, env: 0, lamp: 0, disc: 1 };
-  let mood = 'golden';
+  let mood = 'night';
   const copyMood = (m) => { for (const k of Object.keys(cur)) cur[k].isColor || cur[k].isVector3 ? cur[k].copy(m[k]) : (cur[k] = m[k]); };
-  copyMood(MOODS.golden);
+  copyMood(MOODS.night);
   function applyMood() {
     const u = skyMat.uniforms; u.uLow.value.copy(cur.low); u.uMid.value.copy(cur.mid); u.uTop.value.copy(cur.top); u.uBelow.value.copy(cur.below);
     scene.fog.color.copy(cur.fog); scene.background.copy(cur.fog);
