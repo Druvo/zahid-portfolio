@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Zahid Hasan — Drive Through My Career</title>
+  <meta name="description" content="Zahid Hasan, Senior Software Engineer (.NET, Python, microservices). An interactive 3D portfolio: drive a van around an island where every project from his CV is a place you can visit." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <!-- intro -->
+  <div id="intro" class="overlay">
+    <div class="intro-card">
+      <div class="eyebrow">Interactive portfolio</div>
+      <h1>Zahid <span>Hasan</span></h1>
+      <p class="role">Senior Software Engineer · .NET · Python · Microservices</p>
+      <p class="lead">Eight years of delivery, built as an island. Drive the ZH.NET van along the timeline road from 2018 to today. Every project in my CV is a place you can visit, bump into, and knock over.</p>
+      <div class="keys">
+        <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows drive</span>
+        <span><kbd>Shift</kbd> boost</span>
+        <span><kbd>Space</kbd> hop</span>
+        <span><kbd>H</kbd> horn</span>
+        <span><kbd>M</kbd> fast travel</span>
+        <span><kbd>T</kbd> tidy props</span>
+        <span><kbd>C</kbd> plain CV</span>
+      </div>
+      <button id="start" class="btn primary" disabled>Loading world…</button>
+      <div class="bar"><i id="load-bar"></i></div>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" hidden>
+    <div class="topleft">
+      <div class="brand"><b>ZAHID HASAN</b><small>Senior Software Engineer</small></div>
+    </div>
+    <div class="topright">
+      <div class="chip" id="progress">Places found <b id="found">0</b>/<span id="total">0</span></div>
+      <button class="icon" id="btn-map" title="Fast travel (M)">Map</button>
+      <button class="icon" id="btn-cv" title="Plain CV (C)">CV</button>
+      <button class="icon" id="btn-sound" title="Sound (N)">Sound on</button>
+    </div>
+    <div id="prompt"></div>
+    <div id="card" class="card" aria-live="polite"></div>
+    <div class="bottomleft">
+      <div class="speedo"><span id="speed">0</span><small>km/h</small></div>
+      <div class="boost"><i id="boost"></i><span>BOOST</span></div>
+    </div>
+    <canvas id="minimap" width="320" height="320"></canvas>
+    <div id="toast"></div>
+    <div id="touch">
+      <div id="joy"><div id="joy-knob"></div></div>
+      <div class="tbtns"><button id="btn-boost">BOOST</button><button id="btn-hop">HOP</button></div>
+    </div>
+  </div>
+
+  <!-- overlays -->
+  <div id="mapmenu" class="overlay panel" hidden></div>
+  <div id="cv" class="overlay panel" hidden></div>
+
+  <noscript><p style="color:#fff;padding:2rem">Zahid Hasan — Senior Software Engineer. This portfolio needs JavaScript and WebGL. Email: zhdruvo@gmail.com · linkedin.com/in/zhdruvo</p></noscript>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

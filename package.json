@@ -1,0 +1,21 @@
+{
+  "name": "zahid-portfolio",
+  "version": "1.0.0",
+  "description": "Drivable 3D game-style portfolio of Zahid Hasan",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "cannon-es": "^0.20.0",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "vite": "^8.3.2"
+  }
+}
