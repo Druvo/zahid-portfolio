@@ -209,7 +209,7 @@ export function createWorld(scene, renderer) {
   }
 
   return {
-    curve,
+    curve, sun: sunL,
     update(t, dt, focus) {
       updaters.forEach((u) => u(t, dt));
       sunL.position.copy(focus).add(sunOffset); sunL.target.position.copy(focus);

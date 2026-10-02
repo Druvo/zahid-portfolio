@@ -41,6 +41,20 @@ async function boot() {
 
   // ----- world -----
   const W = createWorld(scene, renderer);
+  // ----- quality: high = bloom + MSAA + shadows, low = plain render, DPR 1, no shadows -----
+  let sw = 0, sh = 0;
+  let qPref = null; try { qPref = localStorage.getItem('zh-q'); } catch { /* ignore */ }
+  let quality = qPref || 'high', vanRef = null;
+  function applyQuality(q, save = true) {
+    quality = q;
+    renderer.setPixelRatio(q === 'low' ? 1 : Math.min(devicePixelRatio, 1.5));
+    W.sun.castShadow = q !== 'low';
+    composer.setPixelRatio?.(q === 'low' ? 1 : Math.min(devicePixelRatio, 1.5));
+    if (vanRef) vanRef.headlight.visible = q !== 'low';
+    const b = document.getElementById('btn-q'); if (b) b.textContent = q === 'low' ? 'Quality: Low' : 'Quality: High';
+    if (sw) resize();
+    if (save) { try { localStorage.setItem('zh-q', q); } catch { /* ignore */ } }
+  }
   progress(55); await frame();
   const ctx = { scene, font };
   const entries = buildAll(ctx);
@@ -48,8 +62,8 @@ async function boot() {
 
   const spawnA = -34 * DEG, spawnP = roadPoint(spawnA);
   let saved = 'racer'; try { saved = localStorage.getItem('zh-car') || 'racer'; } catch { /* ignore */ }
-  const van = new Van(scene, spawnP, spawnA + Math.PI / 2, saved);
-  const pickCar = (k) => { van.setModel(k); try { localStorage.setItem('zh-car', k); } catch { /* ignore */ } ui.toast('Now driving: ' + van.model.name); };
+  const van = new Van(scene, spawnP, spawnA + Math.PI / 2, saved); vanRef = van;
+  const pickCar = (k) => { van.setModel(k); van.headlight.visible = quality !== 'low'; try { localStorage.setItem('zh-car', k); } catch { /* ignore */ } ui.toast('Now driving: ' + van.model.name); };
   scene.updateMatrixWorld(true);
 
   let muted = false;
@@ -80,6 +94,7 @@ async function boot() {
     if (k === 'KeyC' && !introMode) ui.toggle(ui.cv);
     if (k === 'KeyV' && !introMode) pickCar(MODELS[(MODELS.findIndex((x) => x.key === van.model.key) + 1) % MODELS.length].key);
     if (k === 'KeyT'&& !introMode) { for (const s of synced) { s.body.position.copy(s.home); s.body.quaternion.copy(s.homeQ); s.body.velocity.setZero(); s.body.angularVelocity.setZero(); s.body.wakeUp(); } ui.toast('Props tidied up'); }
+    if (k === 'KeyG' && !introMode) $('#btn-q').click();
     if (k === 'KeyN') { muted = !muted; audio.setMuted(muted); ui.soundLabel(); }
     if (k === 'Enter' && introMode) start();
   });
@@ -90,10 +105,11 @@ async function boot() {
     $('#intro').classList.add('hide'); $('#hud').hidden = false;
     setTimeout(() => ui.toast('Drive forward to explore. Follow the amber road, or press M to fast travel.', 5000), 700);
   }
+  applyQuality(quality, false);
+  $('#btn-q').onclick = () => { applyQuality(quality === 'low' ? 'high' : 'low'); ui.toast(quality === 'low' ? 'Low quality: bloom, shadows and sharpness reduced' : 'High quality on'); };
   startBtn.disabled = false; startBtn.textContent = 'Start driving →'; startBtn.onclick = start;
 
   // ----- resize -----
-  let sw = 0, sh = 0;
   function resize() {
     sw = Math.max(1, innerWidth); sh = Math.max(1, innerHeight);
     renderer.setSize(sw, sh); composer.setSize(sw, sh);
@@ -102,6 +118,7 @@ async function boot() {
   addEventListener('resize', resize);
 
   // ----- loop -----
+  let fpsT = 0, fpsN = 0, fpsSum = 0, autoDone = false;
   const clock = new THREE.Clock(); let t = 0, active = null, wasRoad = false;
   const lerpAngle = (a, b, k) => { let d = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; return a + d * k; };
 
@@ -156,9 +173,14 @@ async function boot() {
       camera.lookAt(look);
       const fov = 55 + speedK * 6 + (van.boosting ? 7 : 0); camera.fov += (fov - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix();
       ui.setSpeed(van.speed, van.boostEnergy); ui.drawMap(vp, van.heading);
-      bloom.strength = 0.32 + (van.boosting ? 0.18 : 0);
+      if (quality !== 'low') bloom.strength = 0.32 + (van.boosting ? 0.18 : 0);
     }
-    composer.render();
+    if (quality === 'low') renderer.render(scene, camera); else composer.render();
+    // auto-fallback: weak machines with no saved choice drop to low quality
+    if (!introMode && !qPref && !autoDone) {
+      fpsT += dt; if (fpsT > 1.5) { fpsN++; fpsSum += dt; }
+      if (fpsN >= 120) { autoDone = true; if (fpsN / fpsSum < 24) { applyQuality('low', false); ui.toast('Slow frame rate detected: switched to low quality. Press G to switch back.', 5000); } }
+    }
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);

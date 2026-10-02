@@ -126,3 +126,5 @@ h1 span { color: var(--amber); }
 .stat { display: flex; justify-content: space-between; font-size: .75rem; color: var(--mute); margin-top: 4px; }
 .pips { color: var(--c); letter-spacing: 2px; }
 .pips i { color: rgba(255, 255, 255, .18); font-style: normal; }
+
+.topright { flex-wrap: wrap; justify-content: flex-end; max-width: calc(100vw - 190px); }
