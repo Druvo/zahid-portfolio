@@ -19,7 +19,7 @@ import * as audio from './audio.js';
 const $ = (s) => document.querySelector(s);
 const bar = $('#load-bar'), startBtn = $('#start');
 const progress = (p) => { bar.style.width = p + '%'; };
-const frame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+const frame = () => new Promise((r) => { requestAnimationFrame(() => setTimeout(r, 0)); setTimeout(r, 60); });
 
 async function boot() {
   progress(8);
