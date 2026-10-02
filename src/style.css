@@ -111,7 +111,7 @@ h1 span { color: var(--amber); }
 @media (max-width: 640px) {
   .brand small { display: none; }
   .topright .icon { padding: .45rem .7rem; }
-  #minimap { width: 100px; height: 100px; bottom: auto; top: 58px; }
+  #minimap { width: 100px; height: 100px; bottom: auto; top: 118px; }
   .card { top: auto; bottom: 8px; left: 8px; right: 8px; width: auto; max-height: 40vh; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; } }

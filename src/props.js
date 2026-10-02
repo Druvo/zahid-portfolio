@@ -29,9 +29,9 @@ function labelCrate(ctx, text, color, x, y, z, rotY = 0, size = 1.8) {
 
 function pad(g, st, r = 8.6) {
   const c = hex(st.color);
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(r, 48), new THREE.MeshStandardMaterial({ color: 0x0d1220, emissive: c, emissiveIntensity: 0.08, roughness: 1, transparent: true, opacity: 0.85 }));
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(r, 48), new THREE.MeshStandardMaterial({ color: 0x0d1220, emissive: c, emissiveIntensity: 0.04, roughness: 1, transparent: true, opacity: 0.7 }));
   disc.rotation.x = -Math.PI / 2; disc.position.y = 0.06; disc.receiveShadow = true; g.add(disc);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(r - 0.28, r, 64), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.5, side: THREE.DoubleSide }));
+  const ring = new THREE.Mesh(new THREE.RingGeometry(r - 0.28, r, 64), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.3, side: THREE.DoubleSide }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.08; g.add(ring);
   const ring2 = ring.clone(); ring2.material = ring.material.clone(); ring2.scale.setScalar(0.72); g.add(ring2);
   return { disc, ring, ring2 };
@@ -358,7 +358,7 @@ function buildHubs(ctx) {
       dynBox(scene, m, sz.x, sz.y, sz.z, { mass: 5, x: wx, y: sz.y / 2, z: wz, rotY: Math.PI });
       const lab = sprite(s.label, { scale: 0.9, color: '#ffffff', bg: 'rgba(10,14,24,.75)' }); lab.position.set(0, sz.y / 2 + 1.0, 0); m.add(lab);
     });
-    h.update = (t, dt, f) => { ring.ring.material.opacity = 0.35 + f * 0.5; };
+    h.update = (t, dt, f) => { ring.ring.material.opacity = 0.2 + f * 0.35; };
   }
 
   // SKILLS: bowling-pin towers, height = rating
@@ -376,7 +376,7 @@ function buildHubs(ctx) {
       const lab = sprite(sk.name, { scale: 0.62, color: '#fff', bg: 'rgba(10,14,24,.78)', sub: '★'.repeat(sk.rating) + '☆'.repeat(5 - sk.rating) }); lab.position.set(0, hgt / 2 + 1.1, 0); m.add(lab);
       dynBox(scene, m, w, hgt, w, { mass: 5, x: c.x + Math.sin(a) * rad, y: hgt / 2, z: c.z + Math.cos(a) * rad, rotY: a });
     });
-    h.update = (t, dt, f) => { r.ring.material.opacity = 0.3 + f * 0.5; };
+    h.update = (t, dt, f) => { r.ring.material.opacity = 0.18 + f * 0.35; };
   }
 
   // AWARDS: trophy podium + confetti
@@ -399,7 +399,7 @@ function buildHubs(ctx) {
     const cf = new THREE.Points(cg, new THREE.PointsMaterial({ size: 0.28, vertexColors: true, transparent: true, depthWrite: false })); cf.frustumCulled = false; h.g.add(cf);
     h.update = (t, dt, f) => {
       cup.rotation.y = t * 0.8; star.position.set(0, 6.3 + Math.sin(t * 2) * 0.2, 0); star.rotation.y = t * 1.5;
-      r.ring.material.opacity = 0.3 + f * 0.5;
+      r.ring.material.opacity = 0.18 + f * 0.35;
       for (let i = 0; i < N; i++) {
         if (life[i] <= 0) { if (f > 0.4 && Math.random() < dt * 3) { life[i] = 2 + Math.random() * 1.5; pos.set([(Math.random() - 0.5) * 1.5, 5.5, (Math.random() - 0.5) * 1.5], i * 3); vel[i].set((Math.random() - 0.5) * 6, 5 + Math.random() * 5, (Math.random() - 0.5) * 6); } else pos[i * 3 + 1] = -50; continue; }
         life[i] -= dt; vel[i].y -= 9 * dt; vel[i].multiplyScalar(1 - dt * 0.4);
@@ -423,7 +423,7 @@ function buildHubs(ctx) {
     mk('MCP', -3.6, 3, (o) => { const a1 = box(1.2, 1.2, 1.2, 0xff9f43, { emissive: 0xff9f43, ei: 0.7 }); a1.name = 'pa'; o.add(a1); const b1 = box(1.2, 1.2, 1.2, 0x4de3d0, { emissive: 0x4de3d0, ei: 0.7 }); b1.name = 'pb'; o.add(b1); for (const s of [-1, 1]) { const pr = box(0.7, 0.18, 0.18, 0xe9eef7); pr.name = s < 0 ? 'pra' : 'prb'; pr.position.set(s * 0.9, 0.2, 0); o.add(pr); } });
     mk('RAG', 3.6, 3, (o) => { for (let i = 0; i < 4; i++) { const b = box(1.6 - i * 0.12, 0.28, 1.1, [C.pink, C.violet, C.cyan, C.amber][i]); b.position.set((i % 2) * 0.1, -0.5 + i * 0.3, 0); b.rotation.y = i * 0.25; o.add(b); } const lens = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.1, 8, 24), mat(C.gold, { metal: 0.8, rough: 0.3 })); lens.position.set(0.5, 1.4, 0.4); lens.name = 'lens'; o.add(lens); const hd = box(0.14, 0.9, 0.14, C.gold); hd.position.set(1.1, 0.95, 0.4); hd.rotation.z = 0.7; hd.name = 'lh'; o.add(hd); });
     h.update = (t, dt, f) => {
-      r.ring.material.opacity = 0.3 + f * 0.5;
+      r.ring.material.opacity = 0.18 + f * 0.35;
       items.forEach((o, i) => { o.position.y = 3.6 + Math.sin(t * 1.2 + i * 1.5) * 0.3; });
       items[0].rotation.z = t * 0.5; items[1].rotation.y = Math.sin(t * 0.8) * 0.6; items[3].rotation.y = t * 0.6;
       const m = items[2], gap = 0.9 + (Math.sin(t * 1.6) * 0.5 + 0.5) * 1.1;
@@ -447,7 +447,7 @@ function buildHubs(ctx) {
       colliderIn(h.g, x, 1.9, 0, 4.4, 3.8, 3.4);
     };
     mkU(-3.4, 0x8a3a46, 'BUBT', 'B.Sc. CSE 2018-2022'); mkU(3.4, 0x2d5fbf, 'SIMT', 'Diploma 2014-2018');
-    h.update = (t, dt, f) => { r.ring.material.opacity = 0.3 + f * 0.5; };
+    h.update = (t, dt, f) => { r.ring.material.opacity = 0.18 + f * 0.35; };
   }
 
   // CONTACT
@@ -461,7 +461,7 @@ function buildHubs(ctx) {
     colliderIn(h.g, 0, 3, 0, 1.4, 6, 1.4);
     const sg = sign("LET'S TALK", { w: 6, h: 1.6, sub: 'zhdruvo@gmail.com', accent: '#ffb347' }); sg.position.set(0, 1.2, 6.2); sg.rotation.x = -0.12; h.g.add(sg);
     [['EMAIL', '#ffb347', -3.8], ['LINKEDIN', '#4de3d0', 0], ['GITHUB.IO', '#ff7ab6', 3.8]].forEach(([t, c, x], i) => { const w = localToWorld(h.g, x, 0.9, 3.4 + (i === 1 ? 0.8 : 0)); labelCrate(ctx, t, c, w.x, w.y, w.z, h.g.rotation.y + (i - 1) * 0.12); });
-    h.update = (t, dt, f) => { r.ring.material.opacity = 0.3 + f * 0.5; beacon.material.emissiveIntensity = 1 + (Math.sin(t * 5) > 0 ? 2.5 : 0); waves.forEach((w, i) => { const k = (t * 0.6 + i / 3) % 1; w.scale.setScalar(1 + k * 5); w.material.opacity = (1 - k) * 0.7; }); };
+    h.update = (t, dt, f) => { r.ring.material.opacity = 0.18 + f * 0.35; beacon.material.emissiveIntensity = 1 + (Math.sin(t * 5) > 0 ? 2.5 : 0); waves.forEach((w, i) => { const k = (t * 0.6 + i / 3) % 1; w.scale.setScalar(1 + k * 5); w.material.opacity = (1 - k) * 0.7; }); };
   }
   return out;
 }

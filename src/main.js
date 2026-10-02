@@ -29,14 +29,14 @@ async function boot() {
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.92;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.3, 1400);
 
   const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: 4 });
   const composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.32, 0.55, 1.05); composer.addPass(bloom);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.14, 0.4, 1.1); composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
   // ----- world -----
@@ -150,7 +150,7 @@ async function boot() {
     }
     for (const e of entries) {
       e.update(t, dt, e.f, vp);
-      if (e.ring) e.ring.material.opacity = 0.32 + e.f * 0.55;
+      if (e.ring) e.ring.material.opacity = 0.18 + e.f * 0.35;
     }
     W.update(t, dt, vp);
 
@@ -173,7 +173,7 @@ async function boot() {
       camera.lookAt(look);
       const fov = 55 + speedK * 6 + (van.boosting ? 7 : 0); camera.fov += (fov - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix();
       ui.setSpeed(van.speed, van.boostEnergy); ui.drawMap(vp, van.heading);
-      if (quality !== 'low') bloom.strength = 0.32 + (van.boosting ? 0.18 : 0);
+      if (quality !== 'low') bloom.strength = 0.14 + (van.boosting ? 0.1 : 0);
     }
     if (quality === 'low') renderer.render(scene, camera); else composer.render();
     // auto-fallback: weak machines with no saved choice drop to low quality

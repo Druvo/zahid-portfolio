@@ -10,13 +10,14 @@ export const C = {
 };
 
 // ---------- materials / meshes ----------
+const EM = 0.45; // global emissive scale: keeps neon accents subtle
 const matCache = new Map();
 export function mat(color, { emissive = 0, ei = 1, rough = 0.65, metal = 0.05, opacity = 1 } = {}) {
   const key = `${color}|${emissive}|${ei}|${rough}|${metal}|${opacity}`;
   if (!matCache.has(key)) {
     matCache.set(key, new THREE.MeshStandardMaterial({
       color, roughness: rough, metalness: metal, flatShading: true,
-      emissive, emissiveIntensity: emissive ? ei : 0,
+      emissive, emissiveIntensity: emissive ? ei * EM : 0,
       transparent: opacity < 1, opacity,
     }));
   }
@@ -71,7 +72,7 @@ export function sign(text, { w = 6, h = 1.6, color = '#fff', bg = '#10151f', acc
     g.fillStyle = color; g.fillText(text, W / 2, sub ? H * 0.42 : H / 2 + 4);
     if (sub) { g.font = '500 44px Inter, system-ui, sans-serif'; g.fillStyle = accent; g.fillText(sub, W / 2, H * 0.78); }
   });
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.55, roughness: 0.8 }));
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.3, roughness: 0.8 }));
   return shadow(m, false, false);
 }
 
