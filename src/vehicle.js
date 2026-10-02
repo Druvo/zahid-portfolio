@@ -12,8 +12,12 @@ export const MODELS = [
   { key: 'racer', name: 'Apex GT', tag: 'Racing car', color: '#e8262b', stats: { max: 20, boostMax: 34, accel: 2.4, grip: 7.5, steer: 2.3, half: [0.95, 0.4, 2.1] }, bars: [5, 4, 4] },
   { key: 'rally', name: 'Rally Hatch', tag: 'Drift-happy hatchback', color: '#19c3b1', stats: { max: 17, boostMax: 29, accel: 2.0, grip: 4.6, steer: 2.5, half: [0.95, 0.5, 1.7] }, bars: [3, 2, 5] },
   { key: 'buggy', name: 'Dune Buggy', tag: 'Light and bouncy', color: '#ff8a1f', stats: { max: 16, boostMax: 28, accel: 2.2, grip: 5.4, steer: 2.7, half: [1.0, 0.5, 1.5] }, bars: [3, 3, 5] },
+  { key: 'gold', builder: 'racer', paint: 0xffc933, locked: true, name: 'Golden Packet', tag: 'Unlocked: delivered every packet', color: '#ffc933', stats: { max: 21, boostMax: 36, accel: 2.6, grip: 7.5, steer: 2.3, half: [0.95, 0.4, 2.1] }, bars: [5, 4, 4] },
   { key: 'van', name: 'ZH.NET Van', tag: 'The original delivery van', color: '#ffb347', stats: { max: 15.5, boostMax: 27, accel: 1.7, grip: 6.5, steer: 2.05, half: [0.95, 0.5, 1.7] }, bars: [2, 4, 3] },
 ];
+try { if (localStorage.getItem('zh-gold')) MODELS.find((m) => m.key === 'gold').unlocked = true; } catch { /* ignore */ }
+export const available = () => MODELS.filter((m) => !m.locked || m.unlocked);
+export function unlock(key) { const m = MODELS.find((x) => x.key === key); if (m) { m.unlocked = true; try { localStorage.setItem('zh-gold', '1'); } catch { /* ignore */ } } }
 
 function wheelSet(car, { x, zf, zr, rf, rr, wf, wr, color = 0x151821, rim = 0xcfd6e4, steerFront = true }) {
   const wm = mat(color, { rough: 0.9 }), rm = mat(rim, { metal: 0.7, rough: 0.25 });
@@ -45,7 +49,7 @@ function plate(car, text, z, y, w = 1.0, h = 0.42, color = '#ffd166') {
 
 const builders = {
   racer(car) {
-    const v = car.visual, red = 0xe8262b, dark = 0x12151d, white = 0xf3efe6;
+    const v = car.visual, red = car.model.paint || 0xe8262b, dark = 0x12151d, white = 0xf3efe6;
     v.add(at(box(1.5, 0.3, 4.3, red), 0, 0.42, -0.1));                       // tub
     v.add(at(box(1.0, 0.22, 1.3, red), 0, 0.38, 2.15));                       // nose
     v.add(at(box(0.6, 0.18, 0.7, red), 0, 0.34, 2.75));                       // nose tip
@@ -157,7 +161,7 @@ export class Van {
   }
 
   setModel(key) {
-    const m = MODELS.find((x) => x.key === key) || MODELS[0];
+    const m = available().find((x) => x.key === key) || MODELS[0];
     this.model = m; this.stats = m.stats;
     // clear visual
     for (const c of [...this.visual.children]) { this.visual.remove(c); c.traverse?.((o) => { if (o.geometry && !o.isSprite) o.geometry.dispose(); }); }
@@ -165,7 +169,7 @@ export class Van {
     this.headlight = new THREE.SpotLight(0xffe2b0, 90, 46, 0.55, 0.65, 1.2);
     this.visual.add(this.headlight, this.headlight.target);
     this.visual.add(this.flame);
-    builders[m.key](this);
+    builders[m.builder || m.key](this);
     this.visual.rotation.set(0, 0, 0);
     // collider
     const b = this.body; b.shapes.length = 0; b.shapeOffsets.length = 0; b.shapeOrientations.length = 0;
@@ -190,6 +194,11 @@ export class Van {
     this.dust.frustumCulled = false; this.scene.add(this.dust);
     this.dustP = Array.from({ length: 48 }, () => ({ life: 0, p: new THREE.Vector3(), v: new THREE.Vector3() }));
     this.dustI = 0; this.dustAcc = 0;
+    // skid marks
+    const SK = 320; this.skidN = SK;
+    this.skid = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.34, 0.9).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x0a0b0e, transparent: true, opacity: 0.5, depthWrite: false }), SK);
+    this.skid.frustumCulled = false; this.scene.add(this.skid);
+    this.skidP = Array.from({ length: SK }, () => ({ life: 0, x: 0, z: 0, yaw: 0 })); this.skidI = 0; this.skidAcc = 0;
     this.flame = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.6, 8), new THREE.MeshBasicMaterial({ color: 0x7fe9ff, transparent: true, opacity: 0.85 }));
     this.flame.rotation.x = -Math.PI / 2; this.flame.position.set(0, 0.7, -2.5); this.flame.visible = false;
   }
@@ -208,10 +217,12 @@ export class Van {
     let vF = b.velocity.x * fx + b.velocity.z * fz, vL = b.velocity.x * rx + b.velocity.z * rz;
     this.grounded = b.position.y < 0.75;
 
-    const wantBoost = inp.boost && this.boostEnergy > 0.02 && inp.throttle >= 0;
-    this.boostEnergy = THREE.MathUtils.clamp(this.boostEnergy + (wantBoost ? -0.34 : 0.22) * dt, 0, 1);
+    const playerBoost = inp.boost && this.boostEnergy > 0.02 && inp.throttle >= 0;
+    this.kickT = Math.max(0, (this.kickT || 0) - dt);
+    const wantBoost = playerBoost || this.kickT > 0;
+    this.boostEnergy = THREE.MathUtils.clamp(this.boostEnergy + (playerBoost ? -0.34 : 0.22) * dt, 0, 1);
     this.boosting = wantBoost;
-    const max = wantBoost ? S.boostMax : S.max, target = inp.throttle > 0 ? max : inp.throttle < 0 ? -8 : 0;
+    const max = wantBoost ? S.boostMax : S.max, target = (inp.throttle > 0 || this.kickT > 0) ? max : inp.throttle < 0 ? -8 : 0;
     const braking = inp.brake || (target !== 0 && Math.sign(target) !== Math.sign(vF) && Math.abs(vF) > 0.5);
     const rate = inp.throttle === 0 ? 1.4 : braking ? 5 : (wantBoost ? S.accel * 2 : S.accel);
     vF += (inp.brake ? 0 - vF : target - vF) * Math.min(1, rate * dt * (inp.brake ? 2.5 : 1));
@@ -252,6 +263,22 @@ export class Van {
       d.v.set((Math.random() - 0.5) * 1.2 - fx * 1.5, 0.8 + Math.random(), (Math.random() - 0.5) * 1.2 - fz * 1.5);
     }
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+    // skid marks from the rear wheels
+    const skidding = this.grounded && (Math.abs(vL) > 3.2 || (inp.brake && Math.abs(vF) > 6));
+    this.skidding = skidding;
+    if (skidding) {
+      this.skidAcc += dt * 40;
+      while (this.skidAcc > 1) {
+        this.skidAcc -= 1; this.group.updateMatrixWorld(true);
+        for (const w of this.wheels) if (!w.front) { const sk = this.skidP[this.skidI++ % this.skidN], p = this.visual.localToWorld(new THREE.Vector3().copy(w.pivot.position)); sk.life = 1; sk.x = p.x; sk.z = p.z; sk.yaw = Math.atan2(fx, fz); }
+      }
+    }
+    const up = new THREE.Vector3(0, 1, 0), pp = new THREE.Vector3();
+    for (let i = 0; i < this.skidN; i++) {
+      const k = this.skidP[i]; k.life = Math.max(0, k.life - dt * 0.12);
+      const sc = Math.min(1, k.life * 3); q.setFromAxisAngle(up, k.yaw); s.set(sc, 1, sc); pp.set(k.x, 0.1, k.z); m.compose(pp, q, s); this.skid.setMatrixAt(i, m);
+    }
+    this.skid.instanceMatrix.needsUpdate = true;
     this.dustP.forEach((d, i) => {
       d.life = Math.max(0, d.life - dt * 1.6); d.p.addScaledVector(d.v, dt);
       const sc = d.life * 1.3; s.set(sc, sc, sc); m.compose(d.p, q, s); this.dust.setMatrixAt(i, m);

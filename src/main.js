@@ -7,7 +7,9 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { world, synced } from './core.js';
 import { createWorld, roadPoint, polar, DEG } from './world.js';
 import { buildAll } from './props.js';
-import { Van, MODELS } from './vehicle.js';
+import { Van, available, unlock } from './vehicle.js';
+import { createGame } from './game.js';
+import { createTerminal } from './terminal.js';
 import { input, pollInput, setupTouch, onKey } from './input.js';
 import { createUI } from './ui.js';
 import * as audio from './audio.js';
@@ -67,16 +69,36 @@ async function boot() {
   scene.updateMatrixWorld(true);
 
   let muted = false;
+  function travel(e) {
+    const p = e.st.onRoad ? e.g.position.clone() : e.g.localToWorld(new THREE.Vector3(0, 0, e.st.kind ? 11 : 13));
+    p.y = 0; if (e.st.onRoad) p.addScaledVector(new THREE.Vector3(Math.sin(e.g.rotation.y + Math.PI / 2), 0, Math.cos(e.g.rotation.y + Math.PI / 2)), -14);
+    van.spawn.copy(p); van.heading = Math.atan2(e.g.position.x - p.x, e.g.position.z - p.z); van.reset(); camYaw = van.heading; snap = true;
+  }
   const ui = createUI({
     entries,
-    onTravel(e) {
-      const p = e.st.onRoad ? e.g.position.clone() : e.g.localToWorld(new THREE.Vector3(0, 0, e.st.kind ? 11 : 13));
-      p.y = 0; if (e.st.onRoad) p.addScaledVector(new THREE.Vector3(Math.sin(e.g.rotation.y + Math.PI / 2), 0, Math.cos(e.g.rotation.y + Math.PI / 2)), -14);
-      van.spawn.copy(p); van.heading = Math.atan2(e.g.position.x - p.x, e.g.position.z - p.z); van.reset(); camYaw = van.heading; snap = true;
-    },
+    onTravel: travel,
     onSound() { muted = !muted; audio.setMuted(muted); }, isMuted: () => muted, onCar: (k) => pickCar(k), getCar: () => van.model.key,
   });
   setupTouch(document);
+
+  // ----- game layer: boost pads, packets, lap timer, secret car -----
+  const game = createGame({
+    scene, van, startAngle: spawnA,
+    onAllPackets() { unlock('gold'); audio.chime(); ui.toast('All 45 packets delivered. Secret car unlocked: Golden Packet (press V)', 6000); },
+  });
+  game.onLap = (lap, isBest) => { audio.lap(); const m = Math.floor(lap / 60); ui.toast((isBest ? 'New best lap: ' : 'Lap: ') + m + ':' + (lap - m * 60).toFixed(1).padStart(4, '0'), 3500); };
+  const $pk = $('#pk'), $lap = $('#lapt'), $best = $('#best'); $('#pkt').textContent = game.N;
+
+  // ----- sky -----
+  const MOOD_KEYS = ['golden', 'day', 'night'];
+  const setSky = (m) => { const n = W.setMood(m); return n; };
+  const cycleSky = () => { const n = setSky(MOOD_KEYS[(MOOD_KEYS.indexOf(W.mood) + 1) % MOOD_KEYS.length]); ui.toast('Sky: ' + n); };
+
+  // ----- dev terminal (`) -----
+  const term = createTerminal({
+    entries, goto: travel, setCar: (k) => pickCar(k), cars: () => available(), setMood: (m) => { setSky(m); }, moods: MOOD_KEYS,
+    setQuality: (q) => applyQuality(q), game,
+  });
   progress(100);
 
   // ----- camera state -----
@@ -89,10 +111,12 @@ async function boot() {
   addEventListener('pointermove', (e) => { if (drag) { camOff -= (e.clientX - lx) * 0.006; lx = e.clientX; } });
 
   onKey((k) => {
-    if (k === 'Escape') ui.closeAll();
+    if (k === 'Escape') { ui.closeAll(); term.close(); }
     if (k === 'KeyM' && !introMode) ui.toggle(ui.menu);
     if (k === 'KeyC' && !introMode) ui.toggle(ui.cv);
-    if (k === 'KeyV' && !introMode) pickCar(MODELS[(MODELS.findIndex((x) => x.key === van.model.key) + 1) % MODELS.length].key);
+    if (k === 'KeyV' && !introMode) { const l = available(); pickCar(l[(l.findIndex((x) => x.key === van.model.key) + 1) % l.length].key); }
+    if (k === 'KeyL' && !introMode) cycleSky();
+    if (k === 'Backquote' && !introMode) term.toggle();
     if (k === 'KeyT'&& !introMode) { for (const s of synced) { s.body.position.copy(s.home); s.body.quaternion.copy(s.homeQ); s.body.velocity.setZero(); s.body.angularVelocity.setZero(); s.body.wakeUp(); } ui.toast('Props tidied up'); }
     if (k === 'KeyG' && !introMode) $('#btn-q').click();
     if (k === 'KeyN') { muted = !muted; audio.setMuted(muted); ui.soundLabel(); }
@@ -118,7 +142,7 @@ async function boot() {
   addEventListener('resize', resize);
 
   // ----- loop -----
-  let fpsT = 0, fpsN = 0, fpsSum = 0, autoDone = false;
+  let hudT = 0, fpsT = 0, fpsN = 0, fpsSum = 0, autoDone = false;
   const clock = new THREE.Clock(); let t = 0, active = null, wasRoad = false;
   const lerpAngle = (a, b, k) => { let d = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; return a + d * k; };
 
@@ -126,7 +150,7 @@ async function boot() {
     if (innerWidth !== sw || innerHeight !== sh) resize();
     const dt = Math.min(clock.getDelta(), 0.05); t += dt;
     const inp = introMode ? { throttle: 0, steer: 0, boost: false, brake: true, hop: false, honk: false, reset: false } : pollInput();
-    if (!introMode && ui.anyOpen()) { inp.throttle = 0; inp.steer = 0; inp.boost = false; }
+    if (!introMode && (ui.anyOpen() || term.isOpen)) { inp.throttle = 0; inp.steer = 0; inp.boost = false; }
     van.update(dt, inp, t);
     world.step(1 / 60, dt, 3);
     for (const s of synced) { const b = s.body; if (b.sleepState === 2) continue; s.mesh.position.copy(b.position); s.mesh.quaternion.copy(b.quaternion); }
@@ -153,6 +177,10 @@ async function boot() {
       if (e.ring) e.ring.material.opacity = 0.18 + e.f * 0.35;
     }
     W.update(t, dt, vp);
+    if (!introMode) {
+      game.update(t, dt, vp);
+      hudT += dt; if (hudT > 0.1) { hudT = 0; $pk.textContent = game.collected; $lap.textContent = game.lapText(); $best.textContent = game.bestText(); }
+    }
 
     // camera
     if (introMode) {

@@ -22,20 +22,21 @@ export function createWorld(scene, renderer) {
 
   const skyMat = new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: {},
+    uniforms: { uLow: { value: new THREE.Color() }, uMid: { value: new THREE.Color() }, uTop: { value: new THREE.Color() }, uBelow: { value: new THREE.Color() } },
     vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }',
-    fragmentShader: `varying vec3 vP;
+    fragmentShader: `varying vec3 vP; uniform vec3 uLow, uMid, uTop, uBelow;
       void main(){
         float h = clamp(vP.y*0.5+0.5, 0., 1.);
-        vec3 low = vec3(0.98,0.78,0.60), mid = vec3(0.60,0.68,0.82), top = vec3(0.20,0.34,0.60);
+        vec3 low = uLow, mid = uMid, top = uTop;
         vec3 c = mix(low, mid, smoothstep(0.42,0.56,h));
         c = mix(c, top, smoothstep(0.55,0.95,h));
-        c = mix(c, vec3(0.62,0.56,0.55), smoothstep(0.46,0.28,h)); // haze below horizon
+        c = mix(c, uBelow, smoothstep(0.46,0.28,h)); // haze below horizon
         gl_FragColor = vec4(c,1.);
       }`,
   });
   const sky = new THREE.Mesh(new THREE.SphereGeometry(700, 32, 16), skyMat); sky.renderOrder = -10; scene.add(sky);
 
+  let starsMat, sunSprite; const lampMats = [];
   // stars
   {
     const n = 700, p = new Float32Array(n * 3);
@@ -46,7 +47,7 @@ export function createWorld(scene, renderer) {
     }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
     const s = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0.12, fog: false, depthWrite: false }));
-    scene.add(s);
+    scene.add(s); starsMat = s.material;
   }
   // low sun
   {
@@ -56,11 +57,11 @@ export function createWorld(scene, renderer) {
       g.fillStyle = gr; g.fillRect(0, 0, w, h);
     });
     const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true }));
-    sun.position.set(-380, 70, -420); sun.scale.set(170, 170, 1); scene.add(sun);
+    sun.position.set(-380, 70, -420); sun.scale.set(170, 170, 1); scene.add(sun); sunSprite = sun;
   }
 
   // ---------- lights ----------
-  scene.add(new THREE.HemisphereLight(0xbcd0f0, 0x4a4a42, 0.85));
+  const hemi = new THREE.HemisphereLight(0xbcd0f0, 0x4a4a42, 0.85); scene.add(hemi);
   const sunL = new THREE.DirectionalLight(0xffd7a6, 3.1);
   sunL.castShadow = true;
   sunL.shadow.mapSize.set(2048, 2048);
@@ -111,7 +112,7 @@ export function createWorld(scene, renderer) {
       m.makeTranslation(Math.sin(a) * r, 2.0, Math.cos(a) * r); lights.setMatrixAt(i, m);
       staticBox(Math.sin(a) * (ISLAND_R - 1.5), 1.5, Math.cos(a) * (ISLAND_R - 1.5), (2 * Math.PI * ISLAND_R) / N + 1.5, 3, 2.5, a + Math.PI / 2);
     }
-    posts.castShadow = true; scene.add(posts, lights);
+    posts.castShadow = true; scene.add(posts, lights); lampMats.push(lights.material);
   }
 
   // ---------- road (the timeline) ----------
@@ -162,7 +163,7 @@ export function createWorld(scene, renderer) {
       m.makeTranslation(p.x, 2.1, p.z); poles.setMatrixAt(i, m);
       m.makeTranslation(p.x, 4.3, p.z); bulbs.setMatrixAt(i, m);
     }
-    poles.castShadow = true; scene.add(poles, bulbs);
+    poles.castShadow = true; scene.add(poles, bulbs); lampMats.push(bulbs.material);
   }
 
   // data packets flowing along the road, like traffic on a network
@@ -209,9 +210,37 @@ export function createWorld(scene, renderer) {
     updaters.push((t) => { const a = g.attributes.position; for (let i = 0; i < n; i++) a.setY(i, 1 + ((seeds[i][2] * 3 + t * 0.6 + i) % 14)); a.needsUpdate = true; });
   }
 
+  // ---------- time of day ----------
+  const C3 = (h) => new THREE.Color(h);
+  const MOODS = {
+    golden: { name: 'Golden hour', low: C3(0xfac799), mid: C3(0x99add1), top: C3(0x335799), below: C3(0x9e8f8c), fog: C3(0xb9a898), hemiSky: C3(0xbcd0f0), hemiGround: C3(0x4a4a42), hemiI: 0.85, sun: C3(0xffd7a6), sunI: 3.1, off: new THREE.Vector3(-85, 55, -60), exposure: 0.92, stars: 0.12, env: 0.45, lamp: 0.7, disc: 1 },
+    day: { name: 'Midday', low: C3(0xdde8f2), mid: C3(0x8fb8e8), top: C3(0x3f7fd0), below: C3(0xa8b0b8), fog: C3(0xc4d4e4), hemiSky: C3(0xdfeeff), hemiGround: C3(0x6a6a60), hemiI: 1.1, sun: C3(0xfff4dd), sunI: 3.4, off: new THREE.Vector3(-40, 90, -30), exposure: 0.9, stars: 0, env: 0.6, lamp: 0.1, disc: 0.3 },
+    night: { name: 'Night', low: C3(0x1b2238), mid: C3(0x0e1428), top: C3(0x04060f), below: C3(0x0a0d18), fog: C3(0x0a0e1c), hemiSky: C3(0x4a5a90), hemiGround: C3(0x10131f), hemiI: 0.5, sun: C3(0x9db4ff), sunI: 0.9, off: new THREE.Vector3(60, 70, 40), exposure: 1.05, stars: 0.9, env: 0.12, lamp: 3.4, disc: 0 },
+  };
+  const cur = { low: C3(0), mid: C3(0), top: C3(0), below: C3(0), fog: C3(0), hemiSky: C3(0), hemiGround: C3(0), sun: C3(0), off: new THREE.Vector3(), hemiI: 0, sunI: 0, exposure: 1, stars: 0, env: 0, lamp: 0, disc: 1 };
+  let mood = 'golden';
+  const copyMood = (m) => { for (const k of Object.keys(cur)) cur[k].isColor || cur[k].isVector3 ? cur[k].copy(m[k]) : (cur[k] = m[k]); };
+  copyMood(MOODS.golden);
+  function applyMood() {
+    const u = skyMat.uniforms; u.uLow.value.copy(cur.low); u.uMid.value.copy(cur.mid); u.uTop.value.copy(cur.top); u.uBelow.value.copy(cur.below);
+    scene.fog.color.copy(cur.fog); scene.background.copy(cur.fog);
+    hemi.color.copy(cur.hemiSky); hemi.groundColor.copy(cur.hemiGround); hemi.intensity = cur.hemiI;
+    sunL.color.copy(cur.sun); sunL.intensity = cur.sunI; sunOffset.copy(cur.off);
+    renderer.toneMappingExposure = cur.exposure; starsMat.opacity = cur.stars; scene.environmentIntensity = cur.env; sunSprite.material.opacity = cur.disc;
+    for (const m of lampMats) m.emissiveIntensity = cur.lamp;
+  }
+  applyMood();
+  function easeMood(dt) {
+    const k = 1 - Math.exp(-dt * 2.2), t = MOODS[mood];
+    for (const key of Object.keys(cur)) { if (cur[key].isColor || cur[key].isVector3) cur[key].lerp(t[key], k); else cur[key] += (t[key] - cur[key]) * k; }
+    applyMood();
+  }
+
   return {
-    curve, sun: sunL,
+    curve, sun: sunL, MOODS,
+    get mood() { return mood; }, setMood(m) { if (MOODS[m]) mood = m; return MOODS[mood].name; },
     update(t, dt, focus) {
+      easeMood(dt);
       updaters.forEach((u) => u(t, dt));
       sunL.position.copy(focus).add(sunOffset); sunL.target.position.copy(focus);
     },

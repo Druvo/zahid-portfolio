@@ -38,3 +38,11 @@ Touch: on-screen joystick + BOOST/HOP.
 
 ## Edit content
 All text lives in `src/data.js`. Station layout/angles are there too; 3D builders are in `src/props.js`.
+
+## Extras
+- **Packets**: 45 collectible data packets along the road. Deliver them all to unlock the secret *Golden Packet* car.
+- **Boost pads** on the road, a **start line** and **lap timer** (best lap saved locally), **skid marks**.
+- **Time of day** (L): golden hour, midday, night.
+- **Dev terminal** (`` ` ``): `help`, `whoami`, `projects`, `skills`, `goto <id>`, `car`, `sky`, `quality`, `stats`... and a `sudo` easter egg.
+- **Graphics** (G): low/high; auto-drops to low on slow machines.
+- **Cars** (V / Garage): Apex GT, Rally Hatch, Dune Buggy, ZH.NET Van.

@@ -1,6 +1,6 @@
 import { profile, jobs, skills, exploring, awards, education, stations } from './data.js';
 import { ISLAND_R, roadR, DEG } from './world.js';
-import { MODELS } from './vehicle.js';
+import { available } from './vehicle.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
@@ -114,7 +114,7 @@ export function createUI({ entries, onTravel, onSound, isMuted, onCar, getCar })
   const pips = (n) => `<span class="pips">${'●'.repeat(n)}<i>${'●'.repeat(5 - n)}</i></span>`;
   function renderGarage() {
     garage.innerHTML = `<div class="box"><button class="close" data-close>Close (Esc)</button><h2>Garage</h2><p>Pick a ride. Press <kbd>V</kbd> any time to cycle.</p>
-      <div class="cars">${MODELS.map((m) => `<button data-car="${m.key}" class="car ${getCar() === m.key ? 'sel' : ''}" style="--c:${m.color}"><b>${m.name}</b><small>${m.tag}</small>
+      <div class="cars">${available().map((m) => `<button data-car="${m.key}" class="car ${getCar() === m.key ? 'sel' : ''}" style="--c:${m.color}"><b>${m.name}</b><small>${m.tag}</small>
         <div class="stat"><span>Speed</span>${pips(m.bars[0])}</div><div class="stat"><span>Grip</span>${pips(m.bars[1])}</div><div class="stat"><span>Handling</span>${pips(m.bars[2])}</div></button>`).join('')}</div></div>`;
   }
   garage.addEventListener('click', (e) => {

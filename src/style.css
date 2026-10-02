@@ -128,3 +128,17 @@ h1 span { color: var(--amber); }
 .pips i { color: rgba(255, 255, 255, .18); font-style: normal; }
 
 .topright { flex-wrap: wrap; justify-content: flex-end; max-width: calc(100vw - 190px); }
+
+/* dev terminal */
+#term { position: fixed; left: 16px; bottom: 16px; z-index: 15; width: min(560px, calc(100vw - 32px)); height: min(320px, 50vh); display: flex; flex-direction: column; background: rgba(8, 11, 18, .92); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, .5); font: 13px/1.5 ui-monospace, 'Cascadia Mono', Consolas, monospace; backdrop-filter: blur(8px); }
+#term[hidden] { display: none; }
+.term-bar { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; color: var(--cyan); border-bottom: 1px solid var(--line); font-weight: 700; }
+.term-bar button { background: none; border: 1px solid var(--line); color: var(--mute); border-radius: 6px; padding: 1px 8px; font: inherit; cursor: pointer; }
+.term-out { flex: 1; overflow: auto; padding: 8px 12px; color: #d8d3c8; scrollbar-width: thin; }
+.term-out b { color: var(--amber); font-weight: 600; }
+.term-out a { color: var(--cyan); }
+.term-out .err { color: #ff8a80; }
+.term-out .p { color: var(--cyan); }
+.term-in { display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); color: var(--cyan); }
+.term-in input { flex: 1; background: none; border: 0; outline: 0; color: var(--ink); font: inherit; }
+@media (max-width: 640px) { #packets, #lap { display: none; } }

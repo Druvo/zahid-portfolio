@@ -38,3 +38,6 @@ export const honk = () => { tone(311, 0.32, 'square', 0.12); tone(392, 0.32, 'sq
 export const chime = () => { tone(659, 0.35, 'sine', 0.18); tone(988, 0.5, 'sine', 0.14, null, 0.09); tone(1318, 0.6, 'sine', 0.1, null, 0.18); };
 export const hop = () => tone(220, 0.22, 'triangle', 0.15, 520);
 export const bump = (v = 1) => tone(90, 0.12, 'sine', Math.min(0.25, 0.05 * v), 50);
+export const zap = () => { tone(260, 0.35, 'sawtooth', 0.1, 1100); };
+export const coin = () => { tone(988, 0.12, 'square', 0.07); tone(1318, 0.2, 'square', 0.07, null, 0.07); };
+export const lap = () => { tone(523, 0.2, 'triangle', 0.15); tone(659, 0.2, 'triangle', 0.15, null, 0.12); tone(784, 0.4, 'triangle', 0.15, null, 0.24); };
